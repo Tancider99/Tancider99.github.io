@@ -405,6 +405,23 @@
             border-bottom: 1px solid transparent;
         }
 
+        .warning-msg {
+            grid-column: 1 / -1;
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            color: #b45309;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
         .calc-result-area {
             margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--c-border);
             display: flex; justify-content: flex-end; align-items: center; gap: 15px;
@@ -491,15 +508,14 @@
     // --- Data Helper ---
     const formatVar = (text) => `<span class="var">${text}</span>`;
 
-    // --- Constants (Default Values: Updated based on user request) ---
+    // --- Constants (Default Values) ---
     const DEFAULTS = {
-        // リーグ全体の統計（デフォルト値）
+        // リーグ全体の統計（デフォルト値は概算）
         LG_PA: 28500,
         LG_RUNS: 2800,
         LG_HITS: 6900,
         LG_HR: 485,
         LG_OPS: 0.65
-        // wOBA Scale は自動計算するため削除
     };
 
     // Park Factors
@@ -521,37 +537,48 @@
 
     // --- Helper to calculate Derived Constants ---
     function calcDerived(d) {
+        // Check if detailed settings are default
+        const isDefault = (
+            parseFloat(d.lg_pa) === DEFAULTS.LG_PA &&
+            parseFloat(d.lg_runs) === DEFAULTS.LG_RUNS &&
+            parseFloat(d.lg_hits) === DEFAULTS.LG_HITS &&
+            parseFloat(d.lg_hr) === DEFAULTS.LG_HR
+        );
+
+        if (isDefault) {
+            // Return User Specified Fixed Constants for better precision in standard mode
+            return {
+                lg_r_pa: 0.092,
+                rpw: 8.5,
+                rep_per_pa: 15.5 / 600, // 15.5 runs per 600 PA
+                lg_woba: 0.304,
+                woba_scale: 1.24, // Standard Scale
+                lg_tra: 3.90 // Fallback for pitching if needed
+            };
+        }
+
+        // Fallback to Dynamic Calculation if settings are changed
         const lg_r_pa = d.lg_runs / d.lg_pa;
         
         // 1. RPW = 20 * (R/IP). IP is estimated as PA / 4.25
         const est_lg_ip = d.lg_pa / 4.25;
         const rpw = 20 * (d.lg_runs / est_lg_ip);
         
-        // 2. wOBA Scale Calculation: Scale = Lg_OBP / Lg_Raw_wOBA
-        // Since BB and XBH breakdowns are unknown, we estimate them using standard ratios.
-        const est_bb = d.lg_pa * 0.09; // Assume 9% BB rate
-        const est_obp = (d.lg_hits + est_bb) / d.lg_pa; // Simple OBP est
-        
-        // Estimate Raw wOBA components
-        // Breakdown hits: HR is known. Assume remaining hits are 75% 1B, 20% 2B, 5% 3B
+        // 2. wOBA Scale Calculation
+        const est_bb = d.lg_pa * 0.09; 
+        const est_obp = (d.lg_hits + est_bb) / d.lg_pa; 
         const non_hr_hits = d.lg_hits - d.lg_hr;
         const est_1b = non_hr_hits * 0.75;
         const est_2b = non_hr_hits * 0.20;
         const est_3b = non_hr_hits * 0.05;
-        
-        // Raw wOBA weights (Standard values)
         const raw_woba_numerator = (0.69 * est_bb) + (0.89 * est_1b) + (1.27 * est_2b) + (1.62 * est_3b) + (2.10 * d.lg_hr);
         const lg_raw_woba = raw_woba_numerator / d.lg_pa;
-        
         const woba_scale = est_obp / lg_raw_woba;
-        
-        // Lg wOBA (Scaled) for calculation
-        const lg_woba = lg_raw_woba * woba_scale; // effectively est_obp
+        const lg_woba = lg_raw_woba * woba_scale;
 
-        // 3. Replacement Level (Runs per PA) = 0.12 * (wOBA / wOBAscale)
+        // 3. Replacement Level
         const rep_per_pa = 0.12 * (lg_woba / woba_scale);
         
-        // Lg tRA estimation (approx related to R/IP)
         const lg_tra = (d.lg_runs / est_lg_ip) * 9 * 0.92;
 
         return { lg_r_pa, rpw, rep_per_pa, lg_woba, lg_tra, woba_scale };
@@ -563,7 +590,7 @@
         {
             id: "war", category: "tot", title: "WAR (野手)", full: "Wins Above Replacement (Batter)",
             short: "打撃、走塁、守備を総合的に評価して野手の貢献度を表す指標。",
-            desc: "代替可能な控え選手（リプレイスメント・レベルの選手）が出場する場合に比べてどれだけチームの勝利数を増やしたかによって計算される。<br>この計算機では、リーグ総得点や総打席数からRPW（勝利あたりの得点）、代替水準、wOBA Scaleを自動計算します。",
+            desc: "代替可能な控え選手（リプレイスメント・レベルの選手）が出場する場合に比べてどれだけチームの勝利数を増やしたかによって計算される。<br>デフォルト設定では RPW=8.5, R/PA=0.092, 代替水準=15.5/600打席, Lg wOBA=.304 を使用します。",
             formula: `(wRAA + UZR + BaseRunning + ポジション補正 + 代替水準補正) ÷ RPW`,
             criteria: "2.0: レギュラー / 5.0: スター / 8.0: MVP",
             related: ["wraa", "uzr", "woba", "rpw"],
@@ -585,17 +612,14 @@
             calc: (d) => {
                 const C = calcDerived(d);
                 
-                // 1. Calculate wOBA (Using exact hits breakdown)
-                // Single = Hits - Doubles - Triples - HR
+                // 1. Calculate wOBA
                 const s = d.h - d.d - d.t - d.hr;
-                
-                // wOBA Formula (Standard weights: BB=0.69, 1B=0.89, 2B=1.27, 3B=1.62, HR=2.10)
                 const woba_val = (0.69*d.bb + 0.89*s + 1.27*d.d + 1.62*d.t + 2.10*d.hr) / d.pa;
                 
-                // 2. wRAA using calculated Scale and Lg wOBA
+                // 2. wRAA
                 const raw_wRAA = ((woba_val - C.lg_woba) / C.woba_scale) * d.pa;
 
-                // 3. Park Adj = (Lg_R/PA - PF * Lg_R/PA) * PA
+                // 3. Park Adj
                 const pf = PARK_FACTORS[d.stadium].pf;
                 const parkAdj = (C.lg_r_pa - (pf * C.lg_r_pa)) * d.pa;
                 const battingRuns = raw_wRAA + parkAdj;
@@ -608,7 +632,7 @@
                 const uzr = parseFloat(d.def) || 0;
                 const baseRunning = (d.sb * 0.2) || 0;
                 
-                // 6. Replacement Level = RepRun/PA * PA
+                // 6. Replacement Level
                 const repRuns = C.rep_per_pa * d.pa;
                 
                 // 7. Calc WAR
@@ -640,7 +664,7 @@
                 const C = calcDerived(d);
                 const pf = PARK_FACTORS[d.stadium].pf;
                 
-                // wOBA Exact Calc
+                // wOBA Exact
                 const s = d.h - d.d - d.t - d.hr;
                 const woba_val = (0.69*d.bb + 0.89*s + 1.27*d.d + 1.62*d.t + 2.10*d.hr) / d.pa;
                 
@@ -697,7 +721,7 @@
         {
             id: "rpw", category: "tot", title: "RPW", full: "Runs Per Win",
             short: "勝利を1つ増やすのに必要な得点数。",
-            desc: "「1勝の重み」を得点換算したもの。設定された式「20 × (R/IP)」で計算される場合、1イニングあたりの得点が多い（打高）ほど1勝に必要な得点も増える。",
+            desc: "「1勝の重み」を得点換算したもの。デフォルトでは8.5に設定されています。",
             formula: `20 × (リーグ総得点 ÷ リーグ総投球回)`,
             criteria: "8.5 ～ 10.0",
             related: ["war", "pythag"]
@@ -1037,7 +1061,7 @@
         {
             id: "lob_pct", category: "pit", title: "LOB%", full: "Left On Base Percentage",
             short: "残塁率（ランナーを返さなかった割合）。",
-            desc: "投手の粘り強さを示すが、BABIP同様に運の要素も強い。平均は約72%で、極端に高い場合は翌年の揺り戻しが警戒される。",
+            desc: "投手の粘り強さを示すが、BABIP同様に運の要素も強い。平均は約72%で、極端に高い場合は翌年は揺り戻しが警戒される。",
             formula: `(${formatVar('H')}+${formatVar('BB')}-${formatVar('R')}) ÷ (${formatVar('H')}+${formatVar('BB')}-1.4×${formatVar('HR')})`,
             criteria: "72%前後",
             inputs: [{id:'h', label:'被安打'}, {id:'bb', label:'与四球'}, {id:'r', label:'失点'}, {id:'hr', label:'被HR'}],
@@ -1274,10 +1298,11 @@
         } else {
             // Handle default value if present
             const defaultVal = inp.default !== undefined ? inp.default : '';
+            const advClass = inp.advanced ? 'advanced-input' : '';
             return `
                 <div class="calc-group">
                     <label class="calc-label">${inp.label}</label>
-                    <input type="number" class="calc-field" id="calc-${inp.id}" placeholder="0" value="${defaultVal}">
+                    <input type="number" class="calc-field ${advClass}" id="calc-${inp.id}" placeholder="0" value="${defaultVal}" ${inp.advanced ? 'oninput="checkAdvancedChanges()"' : ''}>
                 </div>
             `;
         }
@@ -1322,6 +1347,9 @@
                         <summary class="advanced-summary">詳細設定 (リーグ平均値など)</summary>
                         <div class="advanced-content">
                             ${advInputsHtml}
+                        </div>
+                        <div id="warning-box" class="warning-msg" style="display:none;">
+                            ⚠️ 詳細設定を変更すると精度が落ちる可能性があります
                         </div>
                     </details>
                 `;
@@ -1385,6 +1413,26 @@
         requestAnimationFrame(() => {
             modal.classList.add('show');
         });
+    }
+
+    // Logic to check advanced inputs
+    window.checkAdvancedChanges = function() {
+        const warningBox = document.getElementById('warning-box');
+        if (!warningBox) return;
+
+        const advInputs = document.querySelectorAll('.advanced-input');
+        let isChanged = false;
+
+        // Simply check against DEFAULTS based on ID suffix
+        advInputs.forEach(input => {
+            const key = input.id.replace('calc-', '').toUpperCase();
+            const defVal = DEFAULTS[key];
+            if (defVal !== undefined && parseFloat(input.value) !== defVal) {
+                isChanged = true;
+            }
+        });
+
+        warningBox.style.display = isChanged ? 'flex' : 'none';
     }
 
     // Calculation Function (Global Scope for onclick)
