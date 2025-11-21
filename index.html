@@ -572,7 +572,7 @@
                 {id:'pa', label:'打席数'}, {id:'h', label:'安打'}, {id:'hr', label:'本塁打'}, 
                 {id:'bb', label:'四球'}, {id:'sb', label:'盗塁'},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
-                {id:'pos', label:'守備位置', type:'select', options:{'dh':'DH (-15.1)', '1b':'一塁 (-14.1)', 'lf':'左翼 (-12.0)', 'rf':'右翼 (-5.0)', '3b':'三塁 (-4.8)', '2b':'二塁 (+3.4)', 'cf':'中堅 (+4.2)', 'ss':'遊撃 (+10.3)', 'c':'捕手 (+18.1)'}},
+                {id:'pos', label:'守備位置', type:'select', options:{'dh':'DH', '1b':'一塁', 'lf':'左翼', 'rf':'右翼', '3b':'三塁', '2b':'二塁', 'cf':'中堅', 'ss':'遊撃', 'c':'捕手'}},
                 {id:'def', label:'守備評価', type:'select', options:{'0':'平均的 (0)', '5':'上手い (+5)', '10':'名手 (+10)', '15':'神 (+15)', '-5':'苦手 (-5)', '-10':'下手 (-10)'}},
                 // Advanced Settings
                 {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
