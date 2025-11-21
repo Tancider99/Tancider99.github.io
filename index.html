@@ -570,8 +570,8 @@
         {
             id: "pit_war", category: "tot", title: "WAR (投手)", full: "Wins Above Replacement (Pitcher)",
             short: "投球を総合的に評価して投手の貢献度を表す指標。",
-            desc: "代替可能な控え選手（リプレイスメント・レベルの選手）が出場する場合に比べてどれだけチームの勝利数を増やしたかによって計算される。",
-            formula: `(SPRAR + RPRAR) ÷ ${CONST.RPW}`,
+            desc: "代替可能な控え選手（リプレイスメント・レベルの選手）が出場する場合に比べてどれだけチームの勝利数を増やしたかによって計算される。式中のRPW（Runs Per Win）とは、勝利をひとつ増やすのに対応する得点数のこと（近年だと約8.5）。",
+            formula: `(SPRAR + RPRAR) ÷ RPW`,
             criteria: "2.0: ローテ投手 / 4.0: エース",
             related: ["fip", "tra", "rsaa"],
             aiMode: true,
