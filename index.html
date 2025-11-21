@@ -1303,7 +1303,8 @@
             el.onclick = () => openModal(term.id);
             
             let catLabel = getCatLabel(term.category);
-            const hasCalc = term.inputs ? `<span class="calc-icon ${term.aiMode ? 'ai' : ''}" title="${term.aiMode ? 'AI予測' : '計算可能'}">${term.aiMode ? '🤖' : '🧮'}</span>` : '';
+            // 文言変更: 詳細シミュレーション -> 推定, アイコンはグラフ(📊)のまま
+            const hasCalc = term.inputs ? `<span class="calc-icon ${term.aiMode ? 'ai' : ''}" title="${term.aiMode ? '推定' : '計算可能'}">${term.aiMode ? '📊' : '🧮'}</span>` : '';
             
             el.innerHTML = `
                 <div class="card-header">
@@ -1427,14 +1428,16 @@
             }
 
             const aiClass = term.aiMode ? 'ai-mode' : '';
-            const aiIcon = term.aiMode ? '🤖' : '🧮';
-            const aiText = term.aiMode ? 'AI 予測を実行' : 'CALCULATE';
+            // 文言変更: ESTIMATER -> ESTIMATOR
+            const aiIcon = term.aiMode ? '📊' : '🧮';
+            const aiText = term.aiMode ? '推定を実行' : 'CALCULATE';
+            const titleText = term.aiMode ? 'ESTIMATOR' : 'SIMULATOR';
 
             calcHtml = `
                 <div class="section-label">LABORATORY / ${aiText}</div>
                 <div class="calc-container ${aiClass}" id="calc-container">
                     <div class="calc-title">
-                        <div><span>${aiIcon}</span> ${term.title} Simulator</div>
+                        <div><span>${aiIcon}</span> ${term.title} ${titleText}</div>
                     </div>
                     
                     <!-- Preset Controls -->
@@ -1458,7 +1461,8 @@
                         ${aiText}
                     </button>
                     <div class="calc-result-area">
-                        <div class="calc-res-label">RESULT ${term.aiMode ? '<span>AI ESTIMATED</span>' : ''}:</div>
+                        <!-- 文言変更: ESTIMATED -> 推定値 -->
+                        <div class="calc-res-label">RESULT ${term.aiMode ? '<span>推定値</span>' : ''}:</div>
                         <div class="calc-res-value" id="calc-result">---</div>
                     </div>
                 </div>
