@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SABR METRICS LAB | Ultimate Calculator Edition</title>
+    <style>
+        /* --- Design Tokens --- */
+        :root {
+            --c-bg: #f8fafc;
+            --c-surface: #ffffff;
+            --c-text-primary: #1e293b;
+            --c-text-secondary: #64748b;
+            --c-border: #e2e8f0;
+            
+            /* Category Colors & Accents */
+            --cat-bat: #0ea5e9; --bg-bat: #f0f9ff; /* Sky Blue */
+            --cat-pit: #f43f5e; --bg-pit: #fff1f2; /* Rose */
+            --cat-fld: #d97706; --bg-fld: #fffbeb; /* Amber */
+            --cat-tot: #10b981; --bg-tot: #ecfdf5; /* Emerald */
+            --cat-std: #6366f1; --bg-std: #eef2ff; /* Indigo */
+            --data-source-color: #4b5563;
+            --ai-color: #8b5cf6;
+            
+            --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --shadow-float: 0 10px 40px -10px rgba(0, 0, 0, 0.15);
+
+            --font-sans: "Inter", "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+            --font-mono: "JetBrains Mono", "Fira Code", Consolas, monospace;
+            --font-serif: "Times New Roman", Times, serif; /* For Formulas */
+        }
+
+        /* --- Dark Mode Overrides --- */
+        body.dark-mode {
+            --c-bg: #0f172a;
+            --c-surface: #1e293b;
+            --c-text-primary: #f1f5f9;
+            --c-text-secondary: #94a3b8;
+            --c-border: #334155;
+            
+            --bg-bat: rgba(14, 165, 233, 0.15);
+            --bg-pit: rgba(244, 63, 94, 0.15);
+            --bg-fld: rgba(245, 158, 11, 0.15);
+            --bg-tot: rgba(16, 185, 129, 0.15);
+            --bg-std: rgba(99, 102, 241, 0.15);
+            
+            --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        body {
+            background-color: var(--c-bg);
+            color: var(--c-text-primary);
+            font-family: var(--font-sans);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            overflow-y: scroll;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* --- Header --- */
+        header {
+            background: var(--c-surface);
+            padding: 4rem 2rem;
+            text-align: center;
+            position: relative;
+            border-bottom: 1px solid var(--c-border);
+            background-image: radial-gradient(var(--c-border) 1px, transparent 1px);
+            background-size: 20px 20px;
+            transition: background-color 0.3s;
+        }
+
+        .brand {
+            font-size: 3.5rem;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            margin: 0;
+            color: var(--c-text-primary);
+            background: linear-gradient(135deg, var(--c-text-primary) 0%, var(--c-text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .brand span { color: var(--cat-bat); -webkit-text-fill-color: var(--cat-bat); }
+        
+        .subtitle {
+            color: var(--c-text-secondary);
+            margin-top: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+
+        /* --- Sticky Controls --- */
+        .controls-area {
+            position: sticky;
+            top: 0;
+            background: var(--c-surface);
+            opacity: 0.98;
+            backdrop-filter: blur(12px);
+            z-index: 100;
+            border-bottom: 1px solid var(--c-border);
+            padding: 1rem 0;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .search-wrapper {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            margin: 0 0 1rem;
+            padding: 0 2rem;
+            position: relative;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 16px 24px 16px 50px;
+            border-radius: 16px;
+            border: 1px solid var(--c-border);
+            background: var(--c-bg);
+            font-size: 1rem;
+            color: var(--c-text-primary);
+            box-sizing: border-box;
+            transition: all 0.2s;
+            outline: none;
+            box-shadow: inner 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .search-input:focus {
+            background: var(--c-surface);
+            border-color: var(--cat-bat);
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+        }
+        .search-icon {
+            position: absolute;
+            left: 45px; top: 50%; transform: translateY(-50%);
+            color: var(--c-text-secondary);
+            pointer-events: none;
+        }
+
+        .theme-toggle {
+            background: var(--c-bg);
+            border: 1px solid var(--c-border);
+            color: var(--c-text-primary);
+            width: 54px;
+            height: 54px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .theme-toggle:hover {
+            border-color: var(--c-text-secondary);
+            transform: translateY(-2px);
+        }
+
+        .filter-scroll {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 0 20px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+        .filter-scroll::-webkit-scrollbar { height: 0; }
+
+        .filter-chip {
+            background: var(--c-surface);
+            border: 1px solid var(--c-border);
+            color: var(--c-text-secondary);
+            padding: 8px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 700;
+            transition: all 0.2s;
+            white-space: nowrap;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .filter-chip:hover {
+            background: var(--c-bg); color: var(--c-text-primary); transform: translateY(-2px);
+        }
+        .filter-chip.active {
+            background: var(--c-text-primary); color: var(--c-surface);
+            border-color: var(--c-text-primary); box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        /* --- Grid --- */
+        .grid-container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 40px 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .metric-card {
+            background: var(--c-surface);
+            border-radius: 20px;
+            border: 1px solid var(--c-border);
+            padding: 32px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex; flex-direction: column;
+            position: relative; overflow: hidden;
+            box-shadow: var(--shadow-card);
+        }
+        .metric-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-hover);
+            border-color: var(--cat-bat);
+        }
+        
+        .cat-bat:hover { border-color: var(--cat-bat); }
+        .cat-pit:hover { border-color: var(--cat-pit); }
+        .cat-fld:hover { border-color: var(--cat-fld); }
+        .cat-tot:hover { border-color: var(--cat-tot); }
+        .cat-std:hover { border-color: var(--cat-std); }
+
+        .card-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+        }
+        .card-tag {
+            font-size: 0.7rem; font-weight: 800; padding: 6px 12px; border-radius: 8px;
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .cat-bat .card-tag { background: var(--bg-bat); color: var(--cat-bat); }
+        .cat-pit .card-tag { background: var(--bg-pit); color: var(--cat-pit); }
+        .cat-fld .card-tag { background: var(--bg-fld); color: var(--cat-fld); }
+        .cat-tot .card-tag { background: var(--bg-tot); color: var(--cat-tot); }
+        .cat-std .card-tag { background: var(--bg-std); color: var(--cat-std); }
+        
+        .calc-icon {
+            font-size: 1.2rem; opacity: 0.3; transition: 0.2s;
+        }
+        .metric-card:hover .calc-icon { opacity: 1; transform: scale(1.1); }
+        .calc-icon.ai { color: var(--ai-color); opacity: 0.8; }
+
+        .metric-title {
+            font-size: 2.2rem; font-weight: 800; margin: 0; line-height: 1;
+            color: var(--c-text-primary); letter-spacing: -0.03em;
+        }
+        .metric-full {
+            font-size: 0.85rem; color: var(--c-text-secondary); font-weight: 600;
+            margin: 6px 0 20px; text-transform: uppercase; letter-spacing: 0.02em;
+        }
+        .metric-desc {
+            font-size: 0.95rem; color: var(--c-text-secondary); margin: 0; line-height: 1.6;
+            display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+        }
+
+        /* --- Modal --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: none; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .modal-overlay.show { opacity: 1; }
+
+        .modal-panel {
+            background: var(--c-surface);
+            width: 95%; max-width: 850px; max-height: 92vh;
+            border-radius: 24px; padding: 0;
+            position: relative; overflow: hidden;
+            box-shadow: var(--shadow-float);
+            transform: scale(0.95) translateY(20px); 
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex; flex-direction: column;
+            border: 1px solid var(--c-border);
+        }
+        .modal-overlay.show .modal-panel { transform: scale(1) translateY(0); }
+
+        .modal-header {
+            padding: 32px 40px; background: var(--c-bg); border-bottom: 1px solid var(--c-border);
+            position: relative;
+        }
+        .modal-body {
+            padding: 40px; overflow-y: auto; color: var(--c-text-primary);
+        }
+
+        .m-cat {
+            font-size: 0.8rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.5rem;
+        }
+        .m-title {
+            font-size: 3.5rem; font-weight: 900; margin: 0; line-height: 1; letter-spacing: -0.03em; color: var(--c-text-primary);
+        }
+        .m-full { font-size: 1.1rem; color: var(--c-text-secondary); margin-top: 5px; font-weight: 500; }
+
+        .close-btn {
+            position: absolute; top: 24px; right: 24px;
+            background: var(--c-surface); border: 1px solid var(--c-border);
+            width: 44px; height: 44px; border-radius: 50%;
+            font-size: 1.5rem; color: var(--c-text-secondary);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .close-btn:hover { background: var(--c-bg); color: var(--c-text-primary); transform: rotate(90deg); }
+
+        .section-label {
+            font-size: 0.8rem; font-weight: 800; color: var(--c-text-secondary);
+            text-transform: uppercase; letter-spacing: 0.1em; margin: 3rem 0 1.5rem;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .section-label::before { content:'#'; color: var(--cat-bat); }
+        .section-label::after { content:''; flex:1; height:1px; background: var(--c-border); }
+
+        /* --- Formula Box --- */
+        .formula-box {
+            background: #1e293b; /* Always dark for formula */
+            border: 1px solid #334155;
+            padding: 30px; border-radius: 16px;
+            font-family: var(--font-serif); font-size: 1.3rem; font-style: italic;
+            color: #e2e8f0; overflow-x: auto;
+            text-align: center;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .formula-var {
+            color: #38bdf8; font-weight: bold; margin: 0 2px; font-family: var(--font-sans); font-style: normal;
+        }
+        .formula-op { color: #94a3b8; margin: 0 5px; }
+
+        /* --- Calculator Section --- */
+        .calc-container {
+            background: var(--c-bg); border: 1px solid var(--c-border);
+            border-radius: 16px; padding: 30px;
+            margin-top: 10px;
+        }
+        .calc-container.ai-mode {
+            background: rgba(139, 92, 246, 0.05); border-color: var(--ai-color);
+        }
+        .calc-container.ai-mode .calc-title span { color: var(--ai-color); }
+        .calc-container.ai-mode .calc-btn { background: var(--ai-color); }
+        .calc-container.ai-mode .calc-btn:hover { background: #7c3aed; opacity: 0.9; }
+        .calc-container.ai-mode .calc-res-value { color: var(--ai-color); }
+
+        .calc-title {
+            font-size: 1rem; font-weight: 800; color: var(--cat-bat); margin-bottom: 20px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        
+        .calc-inputs {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px;
+            margin-top: 20px;
+        }
+        .calc-group { display: flex; flex-direction: column; gap: 5px; }
+        .calc-label { font-size: 0.7rem; font-weight: 700; color: var(--c-text-secondary); text-transform: uppercase; }
+        .calc-field, .calc-select {
+            padding: 10px; border-radius: 8px; border: 1px solid var(--c-border);
+            font-family: var(--font-mono); text-align: right; font-size: 1rem; background: var(--c-surface); color: var(--c-text-primary);
+        }
+        .calc-select { text-align: left; font-family: var(--font-sans); cursor: pointer; }
+        .calc-field:focus, .calc-select:focus { outline: none; border-color: var(--cat-bat); ring: 2px rgba(14,165,233,0.2); }
+
+        .calc-result-area {
+            margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--c-border);
+            display: flex; justify-content: flex-end; align-items: center; gap: 15px;
+        }
+        .calc-res-label { font-size: 0.9rem; color: var(--c-text-secondary); font-weight: 600; }
+        .calc-res-label span { font-size: 0.7em; background: var(--ai-color); color: white; padding: 2px 6px; border-radius: 4px; margin-left: 5px; vertical-align: middle; }
+        .calc-res-value { font-size: 2.5rem; font-weight: 900; color: var(--cat-bat); font-family: var(--font-mono); line-height: 1; }
+        .calc-btn {
+            background: var(--cat-bat); color: white; border: none; padding: 10px 24px;
+            border-radius: 50px; font-weight: 700; cursor: pointer;
+            margin-top: 20px; width: 100%; transition: 0.2s;
+        }
+        .calc-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        .criteria-table {
+            width: 100%; border-collapse: collapse; font-size: 0.95rem;
+        }
+        .criteria-table th { text-align: left; color: var(--c-text-secondary); width: 120px; padding: 12px 0; border-bottom: 1px solid var(--c-border); }
+        .criteria-table td { padding: 12px 0; border-bottom: 1px solid var(--c-border); color: var(--c-text-primary); font-weight: 600; }
+
+        .related-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+        .rel-chip {
+            background: var(--c-bg); padding: 8px 20px; border-radius: 50px;
+            font-size: 0.85rem; font-weight: 700; color: var(--c-text-secondary);
+            cursor: pointer; border: 1px solid transparent; transition: 0.2s;
+        }
+        .rel-chip:hover { background: var(--c-text-primary); color: var(--c-surface); }
+
+        .no-result {
+            grid-column: 1 / -1; text-align: center; padding: 60px; color: var(--c-text-secondary);
+        }
+        
+        /* Helper for formula formatting */
+        .var { color: #38bdf8; font-family: var(--font-sans); font-weight: 600; font-style: normal; margin: 0 2px; }
+
+        @media (max-width: 700px) {
+            .brand { font-size: 2.5rem; }
+            .m-title { font-size: 2.5rem; }
+            .grid-container { grid-template-columns: 1fr; padding: 40px 1rem;}
+            .modal-panel { width: 100%; height: 100%; border-radius: 0; }
+            .search-wrapper { padding: 0 1rem; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 class="brand">SABR<span>METRICS</span> LAB</h1>
+        <p class="subtitle">Comprehensive Baseball Analytics Dictionary & Calculator</p>
+    </header>
+
+    <div class="controls-area">
+        <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="search-input" id="searchInput" placeholder="指標名、意味、計算式で検索..." oninput="handleSearch()">
+            <button class="theme-toggle" onclick="toggleTheme()" title="Dark Mode">🌙</button>
+        </div>
+        <div class="filter-scroll">
+            <div class="filter-chip active" onclick="filterCategory('all')" data-cat="all">ALL</div>
+            <div class="filter-chip" onclick="filterCategory('std')" data-cat="std">基本</div>
+            <div class="filter-chip" onclick="filterCategory('bat')" data-cat="bat">打撃</div>
+            <div class="filter-chip" onclick="filterCategory('pit')" data-cat="pit">投球</div>
+            <div class="filter-chip" onclick="filterCategory('fld')" data-cat="fld">守備走塁</div>
+            <div class="filter-chip" onclick="filterCategory('tot')" data-cat="tot">総合</div>
+        </div>
+    </div>
+
+    <div class="grid-container" id="grid">
+        <!-- Generated -->
+    </div>
+
+    <div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
+        <div class="modal-panel">
+            <div class="modal-header" id="modal-header">
+                <button class="close-btn" onclick="closeModal()">×</button>
+                <div id="modal-title-area"></div>
+            </div>
+            <div class="modal-body" id="modal-body-content"></div>
+        </div>
+    </div>
+
+<script>
+    // --- Data Helper ---
+    const formatVar = (text) => `<span class="var">${text}</span>`;
+
+    // --- Constants ---
+    const CONST = {
+        RPW: 8.5,
+        REP_LEVEL_PER_600: 15.5,
+        LG_TRA: 3.30, // Changed from 3.80 to 3.30
+        LG_WOBA: 0.304,
+        WOBA_SCALE: 1.24,
+        LG_TOTAL_RUNS: 2800,
+        LG_TOTAL_PA: 32000
+    };
+    // Derived R/PA
+    CONST.LG_R_PA = CONST.LG_TOTAL_RUNS / CONST.LG_TOTAL_PA; // 0.0875
+
+    // Park Factors
+    const PARK_FACTORS = {
+        'avg':      {name: '平均 (1.00)',     pf: 1.00},
+        'jingu':    {name: '明治神宮 (1.19)', pf: 1.19},
+        'yoko':     {name: '横浜 (1.04)',     pf: 1.04},
+        'mazda':    {name: 'マツダ (0.99)',   pf: 0.99},
+        'tokyo':    {name: '東京ドーム (0.97)', pf: 0.97},
+        'koshien':  {name: '甲子園 (0.92)',   pf: 0.92},
+        'nagoya':   {name: 'バンテリン (0.86)', pf: 0.86},
+        'escon':    {name: 'エスコン (1.06)', pf: 1.06},
+        'zozo':     {name: 'ZOZOマリン (1.06)', pf: 1.06},
+        'paypay':   {name: 'PayPay (1.05)',   pf: 1.05},
+        'belluna':  {name: 'ベルーナ (0.97)', pf: 0.97},
+        'kyocera':  {name: '京セラ (0.95)',   pf: 0.95},
+        'rakuten':  {name: '楽天モバイル (0.94)', pf: 0.94}
+    };
+
+    // --- Terms Database ---
+    const terms = [
+        /* ---------------- 総合 (Total) ---------------- */
+        {
+            id: "war", category: "tot", title: "WAR (野手)", full: "Wins Above Replacement (Batter)",
+            short: "打撃、走塁、守備を総合的に評価して野手の貢献度を表す指標。",
+            desc: "代替可能な控え選手（リプレイスメント・レベルの選手）が出場する場合に比べてどれだけチームの勝利数を増やしたかによって計算される。",
+            formula: `(wRAA + UZR + BaseRunning + ポジション補正 + 代替水準補正) ÷ ${CONST.RPW}`,
+            criteria: "2.0: レギュラー / 5.0: スター / 8.0: MVP",
+            related: ["wraa", "uzr", "woba"],
+            aiMode: true, // AI ESTIMATION FLAG
+            inputs: [
+                {id:'pa', label:'打席数'}, {id:'h', label:'安打'}, {id:'hr', label:'本塁打'}, 
+                {id:'bb', label:'四球'}, {id:'sb', label:'盗塁'},
+                {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
+                {id:'pos', label:'守備位置', type:'select', options:{'dh':'DH (-15.1)', '1b':'一塁 (-14.1)', 'lf':'左翼 (-12.0)', 'rf':'右翼 (-5.0)', '3b':'三塁 (-4.8)', '2b':'二塁 (+3.4)', 'cf':'中堅 (+4.2)', 'ss':'遊撃 (+10.3)', 'c':'捕手 (+18.1)'}},
+                {id:'def', label:'守備評価', type:'select', options:{'0':'平均的 (0)', '5':'上手い (+5)', '10':'名手 (+10)', '15':'神 (+15)', '-5':'苦手 (-5)', '-10':'下手 (-10)'}}
+            ],
+            calc: (d) => {
+                // 1. Estimate wOBA (Approximation with 1B/2B/3B estimation)
+                const non_hr_hits = d.h - d.hr;
+                const est_1b = non_hr_hits * 0.78;
+                const est_2b = non_hr_hits * 0.20;
+                const est_3b = non_hr_hits * 0.02;
+                
+                const woba_approx = (0.69*d.bb + 0.89*est_1b + 1.27*est_2b + 1.62*est_3b + 2.10*d.hr) / d.pa;
+                
+                // 2. Raw wRAA
+                const raw_wRAA = ((woba_approx - CONST.LG_WOBA) / CONST.WOBA_SCALE) * d.pa;
+
+                // 3. Park Adjustment for Batting Runs
+                const pf = PARK_FACTORS[d.stadium].pf;
+                // Park Adj = (Lg_R/PA - PF * Lg_R/PA) * PA
+                const parkAdj = (CONST.LG_R_PA - (pf * CONST.LG_R_PA)) * d.pa;
+                
+                const battingRuns = raw_wRAA + parkAdj;
+                
+                // 4. Positional Adjustment (DELTA Values, Pro-rated by PA/600)
+                const posVals = {'dh':-15.1, '1b':-14.1, 'lf':-12.0, 'rf':-5.0, '3b':-4.8, '2b':3.4, 'cf':4.2, 'ss':10.3, 'c':18.1};
+                const posAdj = (posVals[d.pos] || 0) * (d.pa / 600);
+                
+                // 5. UZR & BaseRunning Estimation
+                const uzr = parseFloat(d.def) || 0;
+                const baseRunning = (d.sb * 0.2) || 0; // Simple run value
+                
+                // 6. Replacement Level (15.5 runs per 600 PA)
+                const repLevel = CONST.REP_LEVEL_PER_600 * (d.pa / 600);
+                
+                // 7. Calc WAR
+                const totalRuns = battingRuns + uzr + baseRunning + posAdj + repLevel;
+                const war = totalRuns / CONST.RPW;
+                
+                return war.toFixed(1);
+            }
+        },
+        {
+            id: "wrc_plus", category: "bat", title: "wRC+", full: "weighted Runs Created Plus",
+            short: "打撃の傑出度を評価する指標",
+            desc: "打席あたりの得点創出の多さを平均的な打者を100とした場合のパーセンテージで評価する指標。wRC+が130であればリーグの平均的な打者の1.3倍の効率で得点を生産する打者であるといえる。",
+            formula: `(((wRAA/打席 + R/PA) + (R/PA - PF×R/PA)) ÷ R/PA) × 100`,
+            criteria: "100: 平均 / 160: MVP候補 / 200: 歴史的",
+            related: ["woba", "wraa"],
+            aiMode: true,
+            inputs: [
+                {id:'pa', label:'打席数'}, {id:'h', label:'安打'}, {id:'hr', label:'本塁打'}, {id:'bb', label:'四球'},
+                {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})}
+            ],
+            calc: (d) => {
+                const pf = PARK_FACTORS[d.stadium].pf;
+                
+                // 1. Raw wOBA Estimation (using 1B approx)
+                const non_hr_hits = d.h - d.hr;
+                const est_1b = non_hr_hits * 0.78;
+                const est_2b = non_hr_hits * 0.20;
+                const est_3b = non_hr_hits * 0.02;
+                
+                const woba_est = (0.69*d.bb + 0.89*est_1b + 1.27*est_2b + 1.62*est_3b + 2.10*d.hr) / d.pa;
+                
+                // 2. Raw wRAA
+                const raw_wraa = ((woba_est - CONST.LG_WOBA) / CONST.WOBA_SCALE) * d.pa;
+                
+                // 3. wRC+ Calc
+                const wrc_plus_val = (((raw_wraa / d.pa) + CONST.LG_R_PA + (CONST.LG_R_PA - (pf * CONST.LG_R_PA))) / CONST.LG_R_PA) * 100;
+                
+                return wrc_plus_val.toFixed(0);
+            }
+        },
+        {
+            id: "pit_war", category: "tot", title: "WAR (投手)", full: "Wins Above Replacement (Pitcher)",
+            short: "投球を総合的に評価して投手の貢献度を表す指標。",
+            desc: "代替可能な控え選手（リプレイスメント・レベルの選手）が出場する場合に比べてどれだけチームの勝利数を増やしたかによって計算される。",
+            formula: `(SPRAR + RPRAR) ÷ ${CONST.RPW}`,
+            criteria: "2.0: ローテ投手 / 5.0: エース",
+            related: ["fip", "tra", "rsaa"],
+            aiMode: true,
+            inputs: [
+                {id:'ip', label:'投球回'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, {id:'hr', label:'被本塁打'},
+                {id:'role', label:'役割', type:'select', options:{'sp':'先発', 'rp':'救援'}},
+                {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})}
+            ],
+            calc: (d) => {
+                // 1. 簡易tRA (FIPベース) の推定
+                const raw_tra = ((13 * d.hr + 3 * d.bb - 2 * d.so) / d.ip) + 3.10;
+                
+                // 2. PF補正後tRA
+                const pf = PARK_FACTORS[d.stadium].pf;
+                const adj_tra = raw_tra / pf;
+                
+                // 3. 守備から独立したアウト数 (簡易的に IP * 3)
+                let sprar = 0;
+                let rprar = 0;
+                
+                if (d.role === 'sp') {
+                    // SPRAR = (1.19 * Lg_tRA + 0.30 - Adj_tRA) / 9 * IP
+                    sprar = (1.19 * CONST.LG_TRA + 0.30 - adj_tra) / 9 * d.ip;
+                } else {
+                    // RPRAR = (1.19 * Lg_tRA - 0.55 - Adj_tRA) / 9 * IP
+                    rprar = (1.19 * CONST.LG_TRA - 0.55 - adj_tra) / 9 * d.ip;
+                }
+                
+                // 4. WAR
+                const war = (sprar + rprar) / CONST.RPW;
+                
+                return war.toFixed(1);
+            }
+        },
+        {
+            id: "wpa", category: "tot", title: "WPA", full: "Win Probability Added",
+            short: "勝利確率をどれだけ変動させたか。",
+            desc: "状況（点差、イニング、走者、アウト）ごとの勝利確率を、プレイ前後でどれだけ増やしたか。勝負強さを測るのに最適。サヨナラホームランなどは非常に高い値になる。",
+            formula: `プレイ後の勝利確率 - プレイ前の勝利確率`,
+            criteria: "状況に依存",
+            related: ["re24"]
+        },
+        {
+            id: "re24", category: "tot", title: "RE24", full: "Run Expectancy 24",
+            short: "状況別の「得点期待値」の増減。",
+            desc: "24種類の状況（無死一塁など）における得点期待値をどれだけ改善させたか。打点などより文脈を正確に反映する。",
+            formula: `プレイ後期待値 - プレイ前期待値 + 得点`,
+            criteria: "0: 平均",
+            related: ["wpa"]
+        },
+        {
+            id: "pythag", category: "tot", title: "Pythagenpat", full: "Pythagorean Expectation",
+            short: "得失点から予測される「本来あるべき勝率」。",
+            desc: "実際の勝率がこれより高いと「運が良い」または「接戦に強い（監督の采配が良い）」とされる。1.02などでは、未来の勝率予測に役立つとして重視される。",
+            formula: `${formatVar('得点')}^x ÷ (${formatVar('得点')}^x + ${formatVar('失点')}^x) <br><small style="font-size:0.7em; color:#94a3b8;">x = (得点+失点)^0.287</small>`,
+            criteria: "実際の勝率との乖離を確認",
+            inputs: [
+                {id:'rs', label:'得点'}, {id:'ra', label:'失点'}
+            ],
+            calc: (d) => {
+                const x = Math.pow((d.rs + d.ra), 0.287);
+                return (Math.pow(d.rs, x) / (Math.pow(d.rs, x) + Math.pow(d.ra, x))).toFixed(3);
+            }
+        },
+        {
+            id: "pf", category: "tot", title: "PF", full: "Park Factor",
+            short: "球場の特性（打者有利/投手有利）を表す数値。",
+            desc: "1.00が平均。1.00より大きければ打者有利、小さければ投手有利。セイバーメトリクスでは、選手の成績を比較する際にこのPF補正をかけることが常識となっている。",
+            formula: `(本拠地での本塁打 + 被本塁打) ÷ (敵地での本塁打 + 被本塁打)`,
+            criteria: "1.00: 中立 / 1.20: ヒッターズパーク",
+            related: ["wrc_plus"]
+        },
+
+        /* ---------------- 打撃 (Batting) ---------------- */
+        {
+            id: "avg", category: "std", title: "AVG", full: "Batting Average",
+            short: "打率。",
+            formula: `${formatVar('安打')} ÷ ${formatVar('打数')}`,
+            criteria: ".250: 平均 / .300: 優秀",
+            inputs: [{id:'h', label:'安打'}, {id:'ab', label:'打数'}],
+            calc: (d) => (d.h / d.ab).toFixed(3).replace(/^0/,'')
+        },
+        {
+            id: "obp", category: "std", title: "OBP", full: "On Base Percentage",
+            short: "出塁率。",
+            desc: "打率よりも得点との相関が高いため、セイバーメトリクスでは打率より重視される。四死球を選べる打者は価値が高い。",
+            formula: `(${formatVar('安打')} + ${formatVar('四球')} + ${formatVar('死球')}) ÷ (${formatVar('打数')} + ${formatVar('四球')} + ${formatVar('死球')} + ${formatVar('犠飛')})`,
+            criteria: ".320: 平均 / .400: 優秀",
+            related: ["ops", "isod"],
+            inputs: [{id:'h', label:'安打'}, {id:'bb', label:'四球'}, {id:'hbp', label:'死球'}, {id:'ab', label:'打数'}, {id:'sf', label:'犠飛'}],
+            calc: (d) => ((d.h+d.bb+d.hbp)/(d.ab+d.bb+d.hbp+d.sf)).toFixed(3).replace(/^0/,'')
+        },
+        {
+            id: "slg", category: "std", title: "SLG", full: "Slugging Percentage",
+            short: "長打率。",
+            desc: "打率のような名前だが「1打数あたりの期待塁打数」を表す。単打=1、本塁打=4として計算。",
+            formula: `${formatVar('塁打')} ÷ ${formatVar('打数')}`,
+            criteria: ".400: 平均 / .500: パワーヒッター",
+            related: ["ops", "iso"],
+            inputs: [{id:'tb', label:'塁打'}, {id:'ab', label:'打数'}],
+            calc: (d) => (d.tb / d.ab).toFixed(3).replace(/^0/,'')
+        },
+        {
+            id: "ops", category: "std", title: "OPS", full: "On-base Plus Slugging",
+            short: "出塁率 + 長打率。",
+            desc: "計算が簡単でありながら、チームの得点数と非常に高い相関を持つ指標。現在では公式記録としても採用されることが多い。",
+            formula: `${formatVar('出塁率')} + ${formatVar('長打率')}`,
+            criteria: ".730: 平均 / .800: 優秀 / 1.000: 最強",
+            related: ["woba", "xr"],
+            inputs: [
+                {id:'h', label:'安打'}, {id:'bb', label:'四球'}, {id:'hbp', label:'死球'}, 
+                {id:'ab', label:'打数'}, {id:'sf', label:'犠飛'}, {id:'tb', label:'塁打'}
+            ],
+            calc: (d) => {
+                const obp = (d.h+d.bb+d.hbp)/(d.ab+d.bb+d.hbp+d.sf);
+                const slg = d.tb / d.ab;
+                return (obp + slg).toFixed(3).replace(/^0/,'');
+            }
+        },
+        {
+            id: "woba", category: "bat", title: "wOBA", full: "weighted On-Base Average",
+            short: "各イベントを得点価値で重み付けした「真の出塁率」。",
+            desc: "OPSの欠点（出塁率を過小評価している点）を修正し、各イベント（単打、本塁打、四球など）が得点にどれだけ貢献したかを係数化して計算する。係数は年度ごとに変動する。",
+            formula: `(0.69×${formatVar('四球')} + 0.72×${formatVar('死球')} + 0.89×${formatVar('単打')} + 1.27×${formatVar('二塁打')} + 1.62×${formatVar('三塁打')} + 2.10×${formatVar('本塁打')}) ÷ ${formatVar('打席')}`,
+            criteria: ".320: 平均 / .400: MVP級",
+            related: ["ops", "wrc_plus"],
+            inputs: [
+                {id:'bb', label:'四球'}, {id:'hbp', label:'死球'}, {id:'s', label:'単打'}, 
+                {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, {id:'pa', label:'打席'}
+            ],
+            calc: (d) => {
+                const num = 0.69*d.bb + 0.72*d.hbp + 0.89*d.s + 1.27*d.d + 1.62*d.t + 2.10*d.hr;
+                return (num / d.pa).toFixed(3).replace(/^0/,'');
+            }
+        },
+        {
+            id: "wraa", category: "bat", title: "wRAA", full: "weighted Runs Above Average",
+            short: "平均的な打者より「何点」多く取ったか。",
+            desc: "積み上げ指標。出場数が多く、かつ打撃成績が良いほど数値が高くなる。WARの打撃構成要素として使われる。",
+            formula: `(${formatVar('wOBA')} - リーグ平均wOBA) ÷ 1.24 × ${formatVar('打席')}`,
+            criteria: "0: 平均 / +20: 一流",
+            related: ["war", "woba"]
+        },
+        {
+            id: "iso", category: "bat", title: "ISO", full: "Isolated Power",
+            short: "打率を除いた純粋な長打力。",
+            desc: "長打率から打率を引いて算出する。単打を無視し、二塁打以上を打つ能力のみを評価する。",
+            formula: `${formatVar('長打率')} - ${formatVar('打率')}`,
+            criteria: ".140: 平均 / .250: 強打者",
+            inputs: [{id:'slg', label:'長打率'}, {id:'avg', label:'打率'}],
+            calc: (d) => (d.slg - d.avg).toFixed(3).replace(/^0/,'')
+        },
+        {
+            id: "babip", category: "bat", title: "BABIP", full: "Batting Average on Balls In Play",
+            short: "インプレー打球のヒット率（運の指標）。",
+            desc: "本塁打以外のフェアゾーンに飛んだ打球がヒットになった割合。極端に高い/低い場合は「運」や「守備」の影響が強く、翌年は平均（約.300）に近づく傾向がある。",
+            formula: `(${formatVar('安打')}-${formatVar('本塁打')}) ÷ (${formatVar('打数')}-${formatVar('三振')}-${formatVar('本塁打')}+${formatVar('犠飛')})`,
+            criteria: ".300前後が基準",
+            inputs: [{id:'h', label:'安打'}, {id:'hr', label:'本塁打'}, {id:'ab', label:'打数'}, {id:'so', label:'三振'}, {id:'sf', label:'犠飛'}],
+            calc: (d) => ((d.h - d.hr) / (d.ab - d.so - d.hr + d.sf)).toFixed(3).replace(/^0/,'')
+        },
+        {
+            id: "bb_k", category: "bat", title: "BB/K", full: "Walk to Strikeout Ratio",
+            short: "三振1つに対する四球の数。",
+            desc: "選球眼とコンタクト能力のバランスを示す。1.0を超えれば非常に優秀な打者とされる。",
+            formula: `${formatVar('四球')} ÷ ${formatVar('三振')}`,
+            criteria: "0.4: 平均 / 1.0以上: 優秀",
+            inputs: [{id:'bb', label:'四球'}, {id:'so', label:'三振'}],
+            calc: (d) => (d.bb / d.so).toFixed(2)
+        },
+        {
+            id: "k_pct", category: "bat", title: "K%", full: "Strikeout Percentage",
+            short: "打席に占める三振の割合。",
+            desc: "三振が少ないほどコンタクト能力が高いとされるが、現代野球では長打とのトレードオフとしてある程度許容される傾向。",
+            formula: `${formatVar('三振')} ÷ ${formatVar('打席')}`,
+            criteria: "20%: 平均 / 10%以下: コンタクト巧者",
+            inputs: [{id:'so', label:'三振'}, {id:'pa', label:'打席'}],
+            calc: (d) => ((d.so / d.pa) * 100).toFixed(1) + '%'
+        },
+        {
+            id: "bb_pct", category: "bat", title: "BB%", full: "Walk Percentage",
+            short: "打席に占める四球の割合。",
+            desc: "選球眼の良さを示す。打率が低くてもBB%が高い選手は出塁能力が高く、チームへの貢献度は大きい。",
+            formula: `${formatVar('四球')} ÷ ${formatVar('打席')}`,
+            criteria: "8%: 平均 / 10%以上: 選球眼が良い",
+            inputs: [{id:'bb', label:'四球'}, {id:'pa', label:'打席'}],
+            calc: (d) => ((d.bb / d.pa) * 100).toFixed(1) + '%'
+        },
+        {
+            id: "rc", category: "bat", title: "RC", full: "Runs Created",
+            short: "打者が創出した総得点数。",
+            desc: "ビル・ジェームズが考案した古典的な指標。安打や四球などの出塁能力と、長打力を掛け合わせて得点能力を推定する。",
+            formula: `(出塁能力A × 進塁能力B) ÷ (打席C)`,
+            criteria: "積み上げ型指標",
+            inputs: [{id:'h', label:'安打'}, {id:'bb', label:'四球'}, {id:'tb', label:'塁打'}, {id:'ab', label:'打数'}, {id:'sf', label:'犠飛'}],
+            calc: (d) => {
+                // Basic RC Formula
+                const a = d.h + d.bb;
+                const b = d.tb;
+                const c = d.ab + d.bb;
+                return ((a * b) / c).toFixed(1);
+            }
+        },
+        {
+            id: "rc27", category: "bat", title: "RC27", full: "Runs Created per 27 Outs",
+            short: "この打者9人で打線を組んだ時の1試合予想得点。",
+            desc: "RCを27アウト（1試合分）に換算したもの。打者の得点能力を直感的に理解しやすい。",
+            formula: `RC ÷ (${formatVar('打数')}-${formatVar('安打')}+${formatVar('盗塁死')}+${formatVar('併殺')}+${formatVar('犠打')}+${formatVar('犠飛')}) × 27`,
+            criteria: "4.5点: 平均",
+            inputs: [{id:'h', label:'安打'}, {id:'bb', label:'四球'}, {id:'tb', label:'塁打'}, {id:'ab', label:'打数'}],
+            calc: (d) => {
+                const rc = ((d.h + d.bb) * d.tb) / (d.ab + d.bb);
+                const outs = d.ab - d.h; 
+                return (rc / outs * 27).toFixed(2);
+            }
+        },
+        {
+            id: "xr", category: "bat", title: "XR", full: "Extrapolated Runs",
+            short: "各プレーに得点価値係数を掛けて算出する得点力。",
+            desc: "RCと似ているが、より各イベント（単打0.5点、本塁打1.44点など）の得点貢献を線形的に足し合わせて評価する日本で人気の指標。",
+            formula: `0.5×${formatVar('単打')} + 0.72×${formatVar('二塁打')} + 1.44×${formatVar('HR')} + 0.34×(${formatVar('四球')}+${formatVar('死球')})...`,
+            criteria: "RC27と同様に評価可能",
+            related: ["rc27"],
+            inputs: [{id:'s', label:'単打'}, {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, {id:'bb', label:'四死球'}],
+            calc: (d) => (0.5*d.s + 0.72*d.d + 1.04*d.t + 1.44*d.hr + 0.34*d.bb).toFixed(1)
+        },
+        {
+            id: "ab_hr", category: "bat", title: "AB/HR", full: "At Bats per Home Run",
+            short: "HR1本打つのにかかる打数。",
+            formula: `${formatVar('打数')} ÷ ${formatVar('本塁打')}`,
+            criteria: "20.0以下: 本塁打打者",
+            inputs: [{id:'ab', label:'打数'}, {id:'hr', label:'本塁打'}],
+            calc: (d) => (d.ab / d.hr).toFixed(1)
+        },
+        {
+            id: "pa_bb", category: "bat", title: "PA/BB", full: "Plate Appearances per Walk",
+            short: "四球を1つ選ぶのにかかる打席数。",
+            formula: `${formatVar('打席')} ÷ ${formatVar('四球')}`,
+            inputs: [{id:'pa', label:'打席'}, {id:'bb', label:'四球'}],
+            calc: (d) => (d.pa / d.bb).toFixed(1)
+        },
+        {
+            id: "isod", category: "bat", title: "IsoD", full: "Isolated Discipline",
+            short: "四死球による出塁能力。",
+            desc: "出塁率から打率を引いたもの。選球眼の良さを示す。",
+            formula: `${formatVar('出塁率')} - ${formatVar('打率')}`,
+            criteria: "0.06: 平均 / 0.10: 選球眼良",
+            inputs: [{id:'obp', label:'出塁率'}, {id:'avg', label:'打率'}],
+            calc: (d) => (d.obp - d.avg).toFixed(3).replace(/^0/,'')
+        },
+        {
+            id: "gpa", category: "bat", title: "GPA", full: "Gross Production Average",
+            short: "OPSより打率に近い感覚で評価できる指標。",
+            desc: "OPSは出塁率を過小評価する傾向があるため、出塁率に1.8倍の重みをかけてバランスを取り、さらに打率のようなスケールに変換したもの。",
+            formula: `(1.8 × ${formatVar('出塁率')} + ${formatVar('長打率')}) ÷ 4`,
+            criteria: ".250: 平均",
+            inputs: [{id:'obp', label:'出塁率'}, {id:'slg', label:'長打率'}],
+            calc: (d) => ((1.8 * d.obp + d.slg) / 4).toFixed(3).replace(/^0/,'')
+        },
+        {
+            id: "seca", category: "bat", title: "SecA", full: "Secondary Average",
+            short: "打率以外の要素（四球、長打、盗塁）での貢献度。",
+            desc: "ビル・ジェームズ考案。「打率」に含まれない攻撃力を測る。",
+            formula: `(${formatVar('塁打')}-${formatVar('安打')} + ${formatVar('四球')} + ${formatVar('盗塁')} - ${formatVar('盗塁死')}) ÷ ${formatVar('打数')}`,
+            criteria: ".250: 平均 / .400: 超優秀",
+            inputs: [{id:'tb', label:'塁打'}, {id:'h', label:'安打'}, {id:'bb', label:'四球'}, {id:'sb', label:'盗塁'}, {id:'cs', label:'盗塁死'}, {id:'ab', label:'打数'}],
+            calc: (d) => ((d.tb - d.h + d.bb + d.sb - d.cs) / d.ab).toFixed(3).replace(/^0/,'')
+        },
+        {
+            id: "noi", category: "bat", title: "NOI", full: "New Offensive Index",
+            short: "出塁率＋長打率÷3。",
+            desc: "OPSの簡易修正版。出塁率の価値を長打率の3倍と見積もって計算する。日本独自の指標。",
+            formula: `(${formatVar('出塁率')} + ${formatVar('長打率')} ÷ 3) × 1000`,
+            criteria: "450: 平均 / 550: 優秀",
+            inputs: [{id:'obp', label:'出塁率'}, {id:'slg', label:'長打率'}],
+            calc: (d) => ((d.obp + d.slg / 3) * 1000).toFixed(0)
+        },
+        
+        /* ---------------- 投球 (Pitching) ---------------- */
+        {
+            id: "era", category: "std", title: "ERA", full: "Earned Run Average",
+            short: "防御率。",
+            formula: `${formatVar('自責点')} × 9 ÷ ${formatVar('投球回')}`,
+            criteria: "3.00: 平均",
+            inputs: [{id:'er', label:'自責点'}, {id:'ip', label:'投球回'}],
+            calc: (d) => (d.er * 9 / d.ip).toFixed(2)
+        },
+        {
+            id: "whip", category: "std", title: "WHIP", full: "Walks plus Hits per Inning Pitched",
+            short: "1回あたりに出したランナーの数。",
+            formula: `(${formatVar('被安打')} + ${formatVar('与四球')}) ÷ ${formatVar('投球回')}`,
+            criteria: "1.30: 平均 / 1.00未満: エース",
+            inputs: [{id:'h', label:'被安打'}, {id:'bb', label:'与四球'}, {id:'ip', label:'投球回'}],
+            calc: (d) => ((d.h + d.bb) / d.ip).toFixed(2)
+        },
+        {
+            id: "fip", category: "pit", title: "FIP", full: "Fielding Independent Pitching",
+            short: "守備の影響を除外した「真の防御率」。",
+            desc: "投手の責任である三振・四球・被本塁打のみで評価する。防御率よりも将来の成績予測に役立つ。",
+            formula: `(13×${formatVar('本塁打')} + 3×(${formatVar('四球')}+${formatVar('死球')}) - 2×${formatVar('三振')}) ÷ ${formatVar('投球回')} + 3.10`,
+            criteria: "防御率と同じ感覚で評価",
+            inputs: [{id:'hr', label:'被本塁打'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'}, {id:'so', label:'奪三振'}, {id:'ip', label:'投球回'}],
+            calc: (d) => ((13*d.hr + 3*(d.bb+d.hbp) - 2*d.so)/d.ip + 3.10).toFixed(2)
+        },
+        {
+            id: "xfip", category: "pit", title: "xFIP", full: "Expected FIP",
+            short: "被本塁打の代わりに「フライボール数」を用いたFIPの進化版。",
+            desc: "HR/FB（フライに対する本塁打の割合）をリーグ平均値（約10.5%）に置き換えて計算します。被本塁打の運要素を排除し、より純粋な実力を測ります。",
+            formula: `(13×(FB×0.105) + 3×(BB+HBP) - 2×SO) ÷ IP + 3.10`,
+            criteria: "防御率スケール",
+            inputs: [{id:'fb', label:'フライ数'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'}, {id:'so', label:'奪三振'}, {id:'ip', label:'投球回'}],
+            calc: (d) => {
+                // xFIP Constant approx 3.10, HR/FB approx 10.5%
+                return ((13 * (d.fb * 0.105) + 3 * (d.bb + d.hbp) - 2 * d.so) / d.ip + 3.10).toFixed(2);
+            }
+        },
+        {
+            id: "tra", category: "pit", title: "tRA", full: "True Runs Allowed",
+            short: "打球の種類（ゴロ・フライ）も考慮した究極の指標。",
+            desc: "FIPを発展させ、奪三振・四死球に加え、打たれた打球がゴロかフライかライナーかによって期待失点値を割り当てて算出する。1.02などのサイトで採用されている。",
+            formula: `打球種別ごとの期待失点値の総和`,
+            criteria: "防御率スケール",
+            related: ["fip"]
+        },
+        {
+            id: "k_9", category: "pit", title: "K/9", full: "Strikeouts per 9",
+            short: "奪三振率。",
+            formula: `${formatVar('奪三振')} × 9 ÷ ${formatVar('投球回')}`,
+            criteria: "7.0: 平均 / 9.0: ドクターK",
+            inputs: [{id:'so', label:'奪三振'}, {id:'ip', label:'投球回'}],
+            calc: (d) => (d.so * 9 / d.ip).toFixed(2)
+        },
+        {
+            id: "bb_9", category: "pit", title: "BB/9", full: "Walks per 9",
+            short: "与四球率。",
+            formula: `${formatVar('与四球')} × 9 ÷ ${formatVar('投球回')}`,
+            criteria: "3.0: 平均 / 2.0以下: 制球良",
+            inputs: [{id:'bb', label:'与四球'}, {id:'ip', label:'投球回'}],
+            calc: (d) => (d.bb * 9 / d.ip).toFixed(2)
+        },
+        {
+            id: "k_bb_pit", category: "pit", title: "K/BB", full: "K-to-BB Ratio",
+            short: "奪三振と与四球の比率。",
+            desc: "投手の完成度・安定感を示す重要指標。3.5を超えると非常に優秀とされる。",
+            formula: `${formatVar('奪三振')} ÷ ${formatVar('与四球')}`,
+            criteria: "2.5: 平均 / 4.0: 非常に優秀",
+            inputs: [{id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}],
+            calc: (d) => (d.so / d.bb).toFixed(2)
+        },
+        {
+            id: "hr_9", category: "pit", title: "HR/9", full: "Home Runs per 9",
+            short: "被本塁打率。",
+            formula: `${formatVar('被本塁打')} × 9 ÷ ${formatVar('投球回')}`,
+            criteria: "1.0未満が望ましい",
+            inputs: [{id:'hr', label:'被本塁打'}, {id:'ip', label:'投球回'}],
+            calc: (d) => (d.hr * 9 / d.ip).toFixed(2)
+        },
+        {
+            id: "dice", category: "pit", title: "DICE", full: "Defense Independent Component ERA",
+            short: "FIPとほぼ同じ概念の指標。",
+            desc: "FIPと計算式が非常に似ているが、係数が微妙に異なる。守備に依存しない投球内容を評価する。",
+            formula: `3.00 + (13×${formatVar('HR')} + 3×(${formatVar('四球')}+${formatVar('死球')}) - 2×${formatVar('三振')}) ÷ ${formatVar('IP')}`,
+            criteria: "防御率スケール",
+            inputs: [{id:'hr', label:'HR'}, {id:'bb', label:'四球'}, {id:'hbp', label:'死球'}, {id:'so', label:'三振'}, {id:'ip', label:'IP'}],
+            calc: (d) => (3.00 + (13*d.hr + 3*(d.bb+d.hbp) - 2*d.so)/d.ip).toFixed(2)
+        },
+        {
+            id: "lob_pct", category: "pit", title: "LOB%", full: "Left On Base Percentage",
+            short: "残塁率（ランナーを返さなかった割合）。",
+            desc: "投手の粘り強さを示すが、BABIP同様に運の要素も強い。平均は約72%で、極端に高い場合は翌年の揺り戻しが警戒される。",
+            formula: `(${formatVar('H')}+${formatVar('BB')}-${formatVar('R')}) ÷ (${formatVar('H')}+${formatVar('BB')}-1.4×${formatVar('HR')})`,
+            criteria: "72%前後",
+            inputs: [{id:'h', label:'被安打'}, {id:'bb', label:'与四球'}, {id:'r', label:'失点'}, {id:'hr', label:'被HR'}],
+            calc: (d) => (((d.h+d.bb-d.r)/(d.h+d.bb-1.4*d.hr))*100).toFixed(1) + '%'
+        },
+        {
+            id: "pfr", category: "pit", title: "PFR", full: "Power/Finesse Ratio",
+            short: "投手のタイプ（本格派/技巧派）を分類する指標。",
+            desc: "奪三振と与四球の合計による評価。高いほど三振が取れて四球を出さない「パワーピッチャー」寄り。",
+            formula: `(${formatVar('奪三振')} + ${formatVar('与四球')}) ÷ ${formatVar('投球回')}`,
+            criteria: "-",
+            inputs: [{id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, {id:'ip', label:'投球回'}],
+            calc: (d) => ((d.so + d.bb) / d.ip).toFixed(2)
+        },
+        {
+            id: "ld_pct", category: "pit", title: "LD%", full: "Line Drive Percentage",
+            short: "全打球に占めるライナーの割合。",
+            desc: "ライナー性の打球はヒットになりやすいため、この数値が高い投手はBABIPが高くなりやすい傾向がある。",
+            formula: `${formatVar('LD')} ÷ (${formatVar('LD')}+${formatVar('GB')}+${formatVar('FB')})`,
+            criteria: "10%: 平均",
+            inputs: [{id:'ld', label:'ライナー'}, {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}],
+            calc: (d) => (d.ld / (d.ld + d.gb + d.fb) * 100).toFixed(1) + '%'
+        },
+        {
+            id: "gb_pct", category: "pit", title: "GB%", full: "Ground Ball Percentage",
+            short: "全打球に占めるゴロの割合。",
+            desc: "ゴロが多い投手は長打を浴びにくく、併殺を取りやすい。一般的に45%前後が平均。",
+            formula: `${formatVar('GB')} ÷ (${formatVar('LD')}+${formatVar('GB')}+${formatVar('FB')})`,
+            criteria: "45%: 平均 / 50%超: ゴロP",
+            inputs: [{id:'ld', label:'ライナー'}, {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}],
+            calc: (d) => (d.gb / (d.ld + d.gb + d.fb) * 100).toFixed(1) + '%'
+        },
+        {
+            id: "fb_pct", category: "pit", title: "FB%", full: "Fly Ball Percentage",
+            short: "全打球に占めるフライの割合。",
+            desc: "フライが多い投手は三振が多い傾向がある一方、本塁打を打たれるリスクも高まる。",
+            formula: `${formatVar('FB')} ÷ (${formatVar('LD')}+${formatVar('GB')}+${formatVar('FB')})`,
+            criteria: "45%: 平均",
+            inputs: [{id:'ld', label:'ライナー'}, {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}],
+            calc: (d) => (d.fb / (d.ld + d.gb + d.fb) * 100).toFixed(1) + '%'
+        },
+
+        /* ---------------- 守備 (Fielding) ---------------- */
+        {
+            id: "uzr", category: "fld", title: "UZR", full: "Ultimate Zone Rating",
+            short: "守備による失点防止量（平均比）。",
+            desc: "1.02などで採用される守備指標のスタンダード。グラウンドをゾーンに分割し、打球ごとの処理難易度に応じて貢献度を算出する。",
+            formula: "加点方式",
+            criteria: "0: 平均 / +15: ゴールドグラブ"
+        },
+        {
+            id: "der", category: "fld", title: "DER", full: "Defensive Efficiency Ratio",
+            short: "本塁打以外のインプレー打球をアウトにした割合。",
+            desc: "チーム全体の守備力を測る指標。BABIPの逆数に近い概念。",
+            formula: `1 - ((${formatVar('被安打')} - ${formatVar('被HR')}) ÷ (${formatVar('打者')} - ${formatVar('三振')} - ${formatVar('四球')} - ${formatVar('死球')} - ${formatVar('被HR')}))`,
+            criteria: ".700前後が平均",
+            inputs: [{id:'h', label:'被安打'}, {id:'hr', label:'被HR'}, {id:'bf', label:'打者数'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'}],
+            calc: (d) => (1 - ((d.h - d.hr) / (d.bf - d.so - d.bb - d.hbp - d.hr))).toFixed(3).replace(/^0/,'')
+        },
+        {
+            id: "drs", category: "fld", title: "DRS", full: "Defensive Runs Saved",
+            short: "UZRと並ぶ守備指標の決定版。",
+            desc: "UZRと同様のコンセプトだが、測定方法が異なる。MLBではUZRと共にゴールドグラブ賞の選考基準となる。",
+            formula: "加点方式",
+            criteria: "+15以上: 最高レベル"
+        },
+        {
+            id: "rf", category: "fld", title: "RF", full: "Range Factor",
+            short: "1試合あたりに関与したアウトの数。",
+            desc: "守備範囲の広さを示すとされるが、投手の奪三振能力などに影響を受けるため、UZRなどより精度は低い。",
+            formula: `(${formatVar('刺殺')}+${formatVar('補殺')}) ÷ ${formatVar('守備回')} × 9`,
+            inputs: [{id:'po', label:'刺殺'}, {id:'a', label:'補殺'}, {id:'inn', label:'守備回'}],
+            calc: (d) => ((d.po + d.a) / d.inn * 9).toFixed(2)
+        },
+        {
+            id: "fp", category: "fld", title: "FP%", full: "Fielding Percentage",
+            short: "守備率。",
+            desc: "失策をしなかった割合。守備範囲の広さは考慮されないため、現代のセイバーメトリクスでは重要視されない。",
+            formula: `(${formatVar('刺殺')}+${formatVar('補殺')}) ÷ (${formatVar('刺殺')}+${formatVar('補殺')}+${formatVar('失策')})`,
+            inputs: [{id:'po', label:'刺殺'}, {id:'a', label:'補殺'}, {id:'e', label:'失策'}],
+            calc: (d) => ((d.po + d.a)/(d.po + d.a + d.e)).toFixed(3).replace(/^0/,'')
+        },
+
+        /* ---------------- 走塁 (Running) ---------------- */
+        {
+            id: "wsb", category: "fld", title: "wSB", full: "weighted Stolen Base Runs",
+            short: "盗塁による得点貢献。",
+            desc: "盗塁成功によるプラスと、盗塁死によるマイナス（成功よりペナルティが大きい）を合算したもの。",
+            formula: `0.2×${formatVar('盗塁')} - 0.4×${formatVar('盗塁死')}`,
+            desc: "係数は概算値。盗塁死のマイナスは成功のプラスより大きい。",
+            inputs: [{id:'sb', label:'盗塁'}, {id:'cs', label:'盗塁死'}],
+            calc: (d) => (0.2*d.sb - 0.4*d.cs).toFixed(1)
+        },
+        {
+            id: "sb_pct", category: "fld", title: "SB%", full: "Stolen Base Percentage",
+            short: "盗塁成功率。",
+            formula: `${formatVar('盗塁')} ÷ (${formatVar('盗塁')} + ${formatVar('盗塁死')})`,
+            criteria: "70%以上が損益分岐点",
+            inputs: [{id:'sb', label:'盗塁'}, {id:'cs', label:'盗塁死'}],
+            calc: (d) => ((d.sb / (d.sb + d.cs)) * 100).toFixed(1) + '%'
+        },
+
+        /* ---------------- その他 ---------------- */
+        {
+            id: "p_ip", category: "pit", title: "P/IP", full: "Pitches per Inning",
+            short: "1イニングあたりの投球数。",
+            formula: `${formatVar('投球数')} ÷ ${formatVar('投球回')}`,
+            criteria: "15球以下: 省エネ",
+            inputs: [{id:'np', label:'球数'}, {id:'ip', label:'投球回'}],
+            calc: (d) => (d.np / d.ip).toFixed(1)
+        },
+        {
+            id: "rsaa", category: "pit", title: "RSAA", full: "Runs Saved Above Average",
+            short: "平均的な投手に比べて、どれだけ失点を防いだか。",
+            desc: "防御率と投球回を基に算出する積み上げ系指標。WARの投球版の簡易計算に使われることがある。",
+            formula: `(リーグ平均防御率 - ${formatVar('防御率')}) × ${formatVar('投球回')} ÷ 9`,
+            criteria: "プラスなら平均以上",
+            inputs: [{id:'lg_era', label:'L平均防御率'}, {id:'era', label:'防御率'}, {id:'ip', label:'投球回'}],
+            calc: (d) => ((d.lg_era - d.era) * d.ip / 9).toFixed(1)
+        }
+    ];
+
+    // --- Application Logic ---
+    const grid = document.getElementById('grid');
+    const modal = document.getElementById('modal');
+    const modalTitleArea = document.getElementById('modal-title-area');
+    const modalBodyContent = document.getElementById('modal-body-content');
+    const searchInput = document.getElementById('searchInput');
+    const filterChips = document.querySelectorAll('.filter-chip');
+    
+    let currentFilter = 'all';
+    let currentSearch = '';
+
+    // Dark Mode Toggle Function
+    function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+        const btn = document.querySelector('.theme-toggle');
+        if (document.body.classList.contains('dark-mode')) {
+            btn.textContent = '☀️';
+            btn.title = "Light Mode";
+        } else {
+            btn.textContent = '🌙';
+            btn.title = "Dark Mode";
+        }
+    }
+
+    function render() {
+        grid.innerHTML = '';
+        
+        const filtered = terms.filter(term => {
+            const catMatch = currentFilter === 'all' || term.category === currentFilter;
+            const searchLower = currentSearch.toLowerCase();
+            const searchMatch = !currentSearch || 
+                term.title.toLowerCase().includes(searchLower) || 
+                term.full.toLowerCase().includes(searchLower) ||
+                term.short.includes(currentSearch) ||
+                (term.desc && term.desc.includes(currentSearch));
+            return catMatch && searchMatch;
+        });
+
+        if(filtered.length === 0) {
+            grid.innerHTML = '<div class="no-result">一致する用語が見つかりませんでした。</div>';
+            return;
+        }
+
+        filtered.forEach(term => {
+            const el = document.createElement('div');
+            el.className = `metric-card cat-${term.category}`;
+            el.onclick = () => openModal(term.id);
+            
+            let catLabel = getCatLabel(term.category);
+            const hasCalc = term.inputs ? `<span class="calc-icon ${term.aiMode ? 'ai' : ''}" title="${term.aiMode ? 'AI予測' : '計算可能'}">${term.aiMode ? '🤖' : '🧮'}</span>` : '';
+            
+            el.innerHTML = `
+                <div class="card-header">
+                    <span class="card-tag">${catLabel}</span>
+                    ${hasCalc}
+                </div>
+                <h3 class="metric-title">${term.title}</h3>
+                <div class="metric-full">${term.full}</div>
+                <p class="metric-desc">${term.short}</p>
+            `;
+            grid.appendChild(el);
+        });
+    }
+
+    function getCatLabel(cat) {
+        switch(cat){
+            case 'bat': return "Batting";
+            case 'pit': return "Pitching";
+            case 'fld': return "Fielding";
+            case 'tot': return "Overall";
+            case 'std': return "Basic";
+            default: return "";
+        }
+    }
+    
+    function getCatColor(cat) {
+        switch(cat){
+            case 'bat': return "#0ea5e9";
+            case 'pit': return "#f43f5e";
+            case 'fld': return "#f59e0b";
+            case 'tot': return "#10b981";
+            case 'std': return "#6366f1";
+            default: return "#64748b";
+        }
+    }
+
+    function handleSearch() {
+        currentSearch = searchInput.value;
+        render();
+    }
+
+    function filterCategory(cat) {
+        currentFilter = cat;
+        filterChips.forEach(chip => {
+            if(chip.dataset.cat === cat) chip.classList.add('active');
+            else chip.classList.remove('active');
+        });
+        render();
+    }
+
+    function openModal(id) {
+        const term = terms.find(t => t.id === id);
+        if(!term) return;
+
+        // Build Related HTML
+        let relatedHtml = '';
+        if(term.related && term.related.length > 0) {
+            term.related.forEach(rid => {
+                const rTerm = terms.find(t => t.id === rid);
+                if(rTerm) {
+                    relatedHtml += `<div class="rel-chip" onclick="event.stopPropagation(); openModal('${rid}')">${rTerm.title}</div>`;
+                }
+            });
+        }
+
+        // Build Calculator HTML if inputs exist
+        let calcHtml = '';
+        if(term.inputs && term.calc) {
+            const inputsHtml = term.inputs.map(inp => {
+                if(inp.type === 'select') {
+                    // Dropdown input
+                    const opts = Object.keys(inp.options).map(k => `<option value="${k}">${inp.options[k]}</option>`).join('');
+                    return `
+                        <div class="calc-group">
+                            <label class="calc-label">${inp.label}</label>
+                            <select class="calc-select" id="calc-${inp.id}">
+                                ${opts}
+                            </select>
+                        </div>
+                    `;
+                } else {
+                    // Number input
+                    return `
+                        <div class="calc-group">
+                            <label class="calc-label">${inp.label}</label>
+                            <input type="number" class="calc-field" id="calc-${inp.id}" placeholder="0">
+                        </div>
+                    `;
+                }
+            }).join('');
+
+            const aiClass = term.aiMode ? 'ai-mode' : '';
+            const aiIcon = term.aiMode ? '🤖' : '🧮';
+            const aiText = term.aiMode ? 'AI 予測を実行' : 'CALCULATE';
+
+            calcHtml = `
+                <div class="section-label">LABORATORY / ${aiText}</div>
+                <div class="calc-container ${aiClass}">
+                    <div class="calc-title">
+                        <div><span>${aiIcon}</span> ${term.title} Simulator</div>
+                    </div>
+                    <div class="calc-inputs">
+                        ${inputsHtml}
+                    </div>
+                    <button class="calc-btn" onclick="calculateMetric('${term.id}')">
+                        ${aiText}
+                    </button>
+                    <div class="calc-result-area">
+                        <div class="calc-res-label">RESULT ${term.aiMode ? '<span>AI ESTIMATED</span>' : ''}:</div>
+                        <div class="calc-res-value" id="calc-result">---</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        const catLabel = getCatLabel(term.category);
+        const catColor = getCatColor(term.category);
+
+        // Header
+        modalTitleArea.innerHTML = `
+            <div class="m-cat" style="color:${catColor}">${catLabel}</div>
+            <h2 class="m-title">${term.title}</h2>
+            <div class="m-full">${term.full}</div>
+        `;
+
+        // Body
+        modalBodyContent.innerHTML = `
+            <p style="font-size:1.2rem; font-weight:700; line-height:1.6; color:var(--c-text-primary);">${term.short}</p>
+            ${term.desc ? `<p style="color:var(--c-text-secondary); line-height:1.8;">${term.desc}</p>` : ''}
+
+            <div class="section-label">計算式 / FORMULA</div>
+            <div class="formula-box">${term.formula}</div>
+
+            ${calcHtml}
+
+            <div class="section-label">評価基準 / CRITERIA</div>
+            <table class="criteria-table">
+                <tr><th>目安</th><td>${term.criteria || '---'}</td></tr>
+            </table>
+
+            <div class="section-label">関連指標 / RELATED</div>
+            <div class="related-grid">${relatedHtml || '<span style="color:#94a3b8; font-size:0.9rem">なし</span>'}</div>
+        `;
+
+        modal.style.display = 'flex';
+        requestAnimationFrame(() => {
+            modal.classList.add('show');
+        });
+    }
+
+    // Calculation Function (Global Scope for onclick)
+    window.calculateMetric = function(id) {
+        const term = terms.find(t => t.id === id);
+        if(!term || !term.inputs) return;
+
+        const data = {};
+        let allFilled = true;
+        
+        term.inputs.forEach(inp => {
+            const el = document.getElementById(`calc-${inp.id}`);
+            const val = el.value;
+            if(val === '' && inp.type !== 'select') allFilled = false;
+            
+            if(inp.type === 'select') {
+                data[inp.id] = val;
+            } else {
+                data[inp.id] = parseFloat(val) || 0;
+            }
+        });
+
+        if(!allFilled && !confirm("未入力の項目は0として計算しますか？")) return;
+
+        const result = term.calc(data);
+        
+        // Animation effect
+        const resDiv = document.getElementById('calc-result');
+        resDiv.style.opacity = 0;
+        resDiv.style.transform = "translateY(10px)";
+        setTimeout(() => {
+            resDiv.innerHTML = result;
+            resDiv.style.transition = "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)";
+            resDiv.style.opacity = 1;
+            resDiv.style.transform = "translateY(0)";
+        }, 50);
+    }
+
+    function closeModal() {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 300);
+    }
+
+    function closeModalOutside(e) {
+        if (e.target === modal) closeModal();
+    }
+
+    // Initial Render
+    render();
+
+</script>
+</body>
+</html>
