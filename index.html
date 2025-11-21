@@ -514,8 +514,8 @@
         LG_PA: 28500,
         LG_RUNS: 2800,
         LG_HITS: 6900,
-        LG_2B: 1300,  // 追加
-        LG_3B: 150,   // 追加
+        LG_2B: 1150,  // 変更
+        LG_3B: 120,   // 変更
         LG_HR: 485
         // LG_OPS は削除
     };
@@ -732,6 +732,84 @@
                 // 7. Calc WAR
                 const totalRuns = battingRuns + uzr + baseRunning + posAdj + repRuns;
                 return (totalRuns / C.rpw).toFixed(1);
+            }
+        },
+        {
+            id: "wrc_plus", category: "bat", title: "wRC+", full: "weighted Runs Created Plus",
+            short: "打撃の傑出度を評価する指標",
+            desc: "打席あたりの得点創出の多さを平均的な打者を100とした場合のパーセンテージで評価する指標。",
+            formula: `(((wRAA/打席 + R/PA) + (R/PA - PF×R/PA)) ÷ R/PA) × 100`,
+            criteria: "100: 平均 / 160: MVP候補 / 200: 歴史的",
+            related: ["woba", "wraa"],
+            aiMode: true,
+            inputs: [
+                {id:'pa', label:'打席数'}, {id:'h', label:'安打'}, 
+                {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, 
+                {id:'bb', label:'四球'},
+                {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
+                // Advanced Settings
+                {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
+                {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
+                {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
+                {id:'lg_hr', label:'リーグ総本塁打', type:'number', advanced:true, default: DEFAULTS.LG_HR},
+                {id:'lg_ops', label:'リーグ平均OPS', type:'number', advanced:true, default: DEFAULTS.LG_OPS}
+            ],
+            calc: (d) => {
+                const C = calcDerived(d);
+                const pf = PARK_FACTORS[d.stadium].pf;
+                
+                // wOBA Exact
+                const s = d.h - d.d - d.t - d.hr;
+                const woba_val = (0.69*d.bb + 0.89*s + 1.27*d.d + 1.62*d.t + 2.10*d.hr) / d.pa;
+                
+                // wRAA
+                const raw_wraa = ((woba_val - C.lg_woba) / C.woba_scale) * d.pa;
+                
+                // wRC+ Calc
+                const wrc_plus_val = (((raw_wraa / d.pa) + C.lg_r_pa + (C.lg_r_pa - (pf * C.lg_r_pa))) / C.lg_r_pa) * 100;
+                
+                return wrc_plus_val.toFixed(0);
+            }
+        },
+        {
+            id: "pit_war", category: "tot", title: "WAR (投手)", full: "Wins Above Replacement (Pitcher)",
+            short: "投球を総合的に評価して投手の貢献度を表す指標。",
+            desc: "代替可能な控え選手に比べてどれだけ勝利数を増やしたか。<br>RPW = 20 * (R/IP) の式を用いて計算します。",
+            formula: `(SPRAR + RPRAR) ÷ RPW`,
+            criteria: "2.0: ローテ投手 / 4.0: エース",
+            related: ["fip", "tra", "rsaa", "rpw"],
+            aiMode: true,
+            inputs: [
+                {id:'ip', label:'投球回'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, {id:'hr', label:'被本塁打'},
+                {id:'role', label:'役割', type:'select', options:{'sp':'先発', 'rp':'救援'}},
+                {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
+                // Advanced Settings
+                {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
+                {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
+                {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
+                {id:'lg_hr', label:'リーグ総本塁打', type:'number', advanced:true, default: DEFAULTS.LG_HR},
+                {id:'lg_ops', label:'リーグ平均OPS', type:'number', advanced:true, default: DEFAULTS.LG_OPS}
+            ],
+            calc: (d) => {
+                const C = calcDerived(d);
+
+                // 1. 簡易tRA
+                const raw_tra = ((13 * d.hr + 3 * d.bb - 2 * d.so) / d.ip) + 3.10;
+                
+                // 2. PF補正
+                const pf = PARK_FACTORS[d.stadium].pf;
+                const adj_tra = raw_tra / pf;
+                
+                // 3. SPRAR/RPRAR
+                let sprar = 0;
+                let rprar = 0;
+                if (d.role === 'sp') {
+                    sprar = (1.19 * C.lg_tra + 0.30 - adj_tra) / 9 * d.ip;
+                } else {
+                    rprar = (1.19 * C.lg_tra - 0.55 - adj_tra) / 9 * d.ip;
+                }
+                
+                return ((sprar + rprar) / C.rpw).toFixed(1);
             }
         },
         {
