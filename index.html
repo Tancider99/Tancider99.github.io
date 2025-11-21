@@ -569,7 +569,8 @@
             related: ["wraa", "uzr", "woba", "rpw"],
             aiMode: true,
             inputs: [
-                {id:'pa', label:'打席数'}, {id:'h', label:'安打'}, {id:'hr', label:'本塁打'}, 
+                {id:'pa', label:'打席数'}, {id:'h', label:'安打'}, 
+                {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, 
                 {id:'bb', label:'四球'}, {id:'sb', label:'盗塁'},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 {id:'pos', label:'守備位置', type:'select', options:{'dh':'DH', '1b':'一塁', 'lf':'左翼', 'rf':'右翼', '3b':'三塁', '2b':'二塁', 'cf':'中堅', 'ss':'遊撃', 'c':'捕手'}},
@@ -584,15 +585,15 @@
             calc: (d) => {
                 const C = calcDerived(d);
                 
-                // 1. Estimate wOBA
-                const non_hr_hits = d.h - d.hr;
-                const est_1b = non_hr_hits * 0.78;
-                const est_2b = non_hr_hits * 0.20;
-                const est_3b = non_hr_hits * 0.02;
-                const woba_approx = (0.69*d.bb + 0.89*est_1b + 1.27*est_2b + 1.62*est_3b + 2.10*d.hr) / d.pa;
+                // 1. Calculate wOBA (Using exact hits breakdown)
+                // Single = Hits - Doubles - Triples - HR
+                const s = d.h - d.d - d.t - d.hr;
+                
+                // wOBA Formula (Standard weights: BB=0.69, 1B=0.89, 2B=1.27, 3B=1.62, HR=2.10)
+                const woba_val = (0.69*d.bb + 0.89*s + 1.27*d.d + 1.62*d.t + 2.10*d.hr) / d.pa;
                 
                 // 2. wRAA using calculated Scale and Lg wOBA
-                const raw_wRAA = ((woba_approx - C.lg_woba) / C.woba_scale) * d.pa;
+                const raw_wRAA = ((woba_val - C.lg_woba) / C.woba_scale) * d.pa;
 
                 // 3. Park Adj = (Lg_R/PA - PF * Lg_R/PA) * PA
                 const pf = PARK_FACTORS[d.stadium].pf;
@@ -624,7 +625,9 @@
             related: ["woba", "wraa"],
             aiMode: true,
             inputs: [
-                {id:'pa', label:'打席数'}, {id:'h', label:'安打'}, {id:'hr', label:'本塁打'}, {id:'bb', label:'四球'},
+                {id:'pa', label:'打席数'}, {id:'h', label:'安打'}, 
+                {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, 
+                {id:'bb', label:'四球'},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 // Advanced Settings
                 {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
@@ -637,15 +640,12 @@
                 const C = calcDerived(d);
                 const pf = PARK_FACTORS[d.stadium].pf;
                 
-                // wOBA Est
-                const non_hr_hits = d.h - d.hr;
-                const est_1b = non_hr_hits * 0.78;
-                const est_2b = non_hr_hits * 0.20;
-                const est_3b = non_hr_hits * 0.02;
-                const woba_est = (0.69*d.bb + 0.89*est_1b + 1.27*est_2b + 1.62*est_3b + 2.10*d.hr) / d.pa;
+                // wOBA Exact Calc
+                const s = d.h - d.d - d.t - d.hr;
+                const woba_val = (0.69*d.bb + 0.89*s + 1.27*d.d + 1.62*d.t + 2.10*d.hr) / d.pa;
                 
                 // wRAA
-                const raw_wraa = ((woba_est - C.lg_woba) / C.woba_scale) * d.pa;
+                const raw_wraa = ((woba_val - C.lg_woba) / C.woba_scale) * d.pa;
                 
                 // wRC+ Calc
                 const wrc_plus_val = (((raw_wraa / d.pa) + C.lg_r_pa + (C.lg_r_pa - (pf * C.lg_r_pa))) / C.lg_r_pa) * 100;
