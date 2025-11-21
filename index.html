@@ -337,6 +337,7 @@
             background: var(--c-bg); border: 1px solid var(--c-border);
             border-radius: 16px; padding: 30px;
             margin-top: 10px;
+            position: relative; /* For ocr button positioning */
         }
         .calc-container.ai-mode {
             background: rgba(139, 92, 246, 0.05); border-color: var(--ai-color);
@@ -363,6 +364,35 @@
         }
         .calc-select { text-align: left; font-family: var(--font-sans); cursor: pointer; }
         .calc-field:focus, .calc-select:focus { outline: none; border-color: var(--cat-bat); ring: 2px rgba(14,165,233,0.2); }
+
+        /* Preset Styles */
+        .preset-bar {
+            display: flex; gap: 8px; margin-bottom: 15px; align-items: center;
+            background: rgba(0,0,0,0.03); padding: 12px; border-radius: 12px;
+            flex-wrap: wrap; border: 1px solid var(--c-border);
+        }
+        .preset-label { width: 100%; font-size: 0.75rem; font-weight: 700; color: var(--c-text-secondary); margin-bottom: 4px; }
+        .preset-select {
+            flex: 1; min-width: 140px;
+            padding: 8px; border-radius: 8px; border: 1px solid var(--c-border);
+            font-family: var(--font-sans); font-size: 0.9rem;
+        }
+        .preset-input {
+            flex: 1; min-width: 140px;
+            padding: 8px; border-radius: 8px; border: 1px solid var(--c-border);
+            font-family: var(--font-sans); font-size: 0.9rem;
+        }
+        .preset-btn {
+            padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer;
+            font-weight: 700; font-size: 0.8rem; color: white;
+            transition: 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 4px;
+        }
+        .btn-load { background: var(--c-text-secondary); }
+        .btn-load:hover { background: var(--c-text-primary); }
+        .btn-save { background: var(--cat-bat); }
+        .btn-save:hover { opacity: 0.9; }
+        .btn-del { background: #ef4444; color: white; }
+        .btn-del:hover { opacity: 0.9; }
 
         /* --- Advanced Settings Style --- */
         .advanced-details {
@@ -504,6 +534,9 @@
         </div>
     </div>
 
+    <!-- Hidden file input for OCR -->
+    <input type="file" id="ocr-input" accept="image/*" style="display: none;" onchange="processOCR(this)">
+
 <script>
     // --- Data Helper ---
     const formatVar = (text) => `<span class="var">${text}</span>`;
@@ -539,7 +572,6 @@
 
     // --- Helper to calculate Derived Constants ---
     function calcDerived(d) {
-        // Check if detailed settings are default
         const isDefault = (
             parseFloat(d.lg_pa) === DEFAULTS.LG_PA &&
             parseFloat(d.lg_runs) === DEFAULTS.LG_RUNS &&
@@ -550,39 +582,30 @@
         );
 
         if (isDefault) {
-            // Return User Specified Fixed Constants for better precision in standard mode
             return {
                 lg_r_pa: 0.092,
                 rpw: 8.5,
-                rep_per_pa: 15.5 / 600, // 15.5 runs per 600 PA
+                rep_per_pa: 15.5 / 600, 
                 lg_woba: 0.304,
-                woba_scale: 1.24, // Standard Scale
-                lg_tra: 3.90 // Fallback for pitching if needed
+                woba_scale: 1.24,
+                lg_tra: 3.90
             };
         }
 
-        // Fallback to Dynamic Calculation if settings are changed
         const lg_r_pa = d.lg_runs / d.lg_pa;
-        
-        // 1. RPW = 20 * (R/IP). IP is estimated as PA / 4.25
         const est_lg_ip = d.lg_pa / 4.25;
         const rpw = 20 * (d.lg_runs / est_lg_ip);
         
-        // 2. wOBA Scale Calculation
         const est_bb = d.lg_pa * 0.09; 
         const est_obp = (d.lg_hits + est_bb) / d.lg_pa; 
         
-        // Use actual breakdown from inputs instead of estimates
         const lg_1b = d.lg_hits - d.lg_2b - d.lg_3b - d.lg_hr;
         
         const raw_woba_numerator = (0.69 * est_bb) + (0.89 * lg_1b) + (1.27 * d.lg_2b) + (1.62 * d.lg_3b) + (2.10 * d.lg_hr);
         const lg_raw_woba = raw_woba_numerator / d.lg_pa;
         const woba_scale = est_obp / lg_raw_woba;
         const lg_woba = lg_raw_woba * woba_scale;
-
-        // 3. Replacement Level
         const rep_per_pa = 0.12 * (lg_woba / woba_scale);
-        
         const lg_tra = (d.lg_runs / est_lg_ip) * 9 * 0.92;
 
         return { lg_r_pa, rpw, rep_per_pa, lg_woba, lg_tra, woba_scale };
@@ -606,7 +629,6 @@
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 {id:'pos', label:'守備位置', type:'select', options:{'dh':'DH', '1b':'一塁', 'lf':'左翼', 'rf':'右翼', '3b':'三塁', '2b':'二塁', 'cf':'中堅', 'ss':'遊撃', 'c':'捕手'}},
                 {id:'def', label:'守備評価', type:'select', options:{'0':'平均的 (0)', '5':'上手い (+5)', '10':'名手 (+10)', '15':'神 (+15)', '-5':'苦手 (-5)', '-10':'下手 (-10)'}},
-                // Advanced Settings (Updated)
                 {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
                 {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
                 {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
@@ -616,31 +638,17 @@
             ],
             calc: (d) => {
                 const C = calcDerived(d);
-                
-                // 1. Calculate wOBA
                 const s = d.h - d.d - d.t - d.hr;
                 const woba_val = (0.69*d.bb + 0.89*s + 1.27*d.d + 1.62*d.t + 2.10*d.hr) / d.pa;
-                
-                // 2. wRAA
                 const raw_wRAA = ((woba_val - C.lg_woba) / C.woba_scale) * d.pa;
-
-                // 3. Park Adj
                 const pf = PARK_FACTORS[d.stadium].pf;
                 const parkAdj = (C.lg_r_pa - (pf * C.lg_r_pa)) * d.pa;
                 const battingRuns = raw_wRAA + parkAdj;
-                
-                // 4. Pos Adj
                 const posVals = {'dh':-15.1, '1b':-14.1, 'lf':-12.0, 'rf':-5.0, '3b':-4.8, '2b':3.4, 'cf':4.2, 'ss':10.3, 'c':18.1};
                 const posAdj = (posVals[d.pos] || 0) * (d.pa / 600);
-                
-                // 5. UZR & BaseRunning
                 const uzr = parseFloat(d.def) || 0;
                 const baseRunning = (d.sb * 0.2) || 0;
-                
-                // 6. Replacement Level
                 const repRuns = C.rep_per_pa * d.pa;
-                
-                // 7. Calc WAR
                 const totalRuns = battingRuns + uzr + baseRunning + posAdj + repRuns;
                 return (totalRuns / C.rpw).toFixed(1);
             }
@@ -658,7 +666,6 @@
                 {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, 
                 {id:'bb', label:'四球'},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
-                // Advanced Settings (Updated)
                 {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
                 {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
                 {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
@@ -669,24 +676,17 @@
             calc: (d) => {
                 const C = calcDerived(d);
                 const pf = PARK_FACTORS[d.stadium].pf;
-                
-                // wOBA Exact
                 const s = d.h - d.d - d.t - d.hr;
                 const woba_val = (0.69*d.bb + 0.89*s + 1.27*d.d + 1.62*d.t + 2.10*d.hr) / d.pa;
-                
-                // wRAA
                 const raw_wraa = ((woba_val - C.lg_woba) / C.woba_scale) * d.pa;
-                
-                // wRC+ Calc
                 const wrc_plus_val = (((raw_wraa / d.pa) + C.lg_r_pa + (C.lg_r_pa - (pf * C.lg_r_pa))) / C.lg_r_pa) * 100;
-                
                 return wrc_plus_val.toFixed(0);
             }
         },
         {
             id: "pit_war", category: "tot", title: "WAR (投手)", full: "Wins Above Replacement (Pitcher)",
             short: "投球を総合的に評価して投手の貢献度を表す指標。",
-            desc: "代替可能な控え選手に比べてどれだけ勝利数を増やしたか。<br>RPW = 20 * (R/IP) の式を用いて計算します。",
+            desc: "代替可能な控え選手に比べてどれだけ勝利数を増やしたか。<br>SPRAR (先発としての貢献) と RPRAR (救援としての貢献) を足し合わせ、RPWで割って算出します。",
             formula: `(SPRAR + RPRAR) ÷ RPW`,
             criteria: "2.0: ローテ投手 / 4.0: エース",
             related: ["fip", "tra", "rsaa", "rpw"],
@@ -695,43 +695,40 @@
                 {id:'ip', label:'投球回'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, {id:'hr', label:'被本塁打'},
                 {id:'role', label:'役割', type:'select', options:{'sp':'先発', 'rp':'救援'}},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
-                // Advanced Settings (Updated)
                 {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
                 {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
                 {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
                 {id:'lg_hr', label:'リーグ総本塁打', type:'number', advanced:true, default: DEFAULTS.LG_HR}
-                // Pitching WAR doesn't strictly need 2B/3B for its simplified calculation here, but keeping consistent UI
-                // Removed LG_OPS as requested
             ],
             calc: (d) => {
                 const C = calcDerived(d);
-                
-                // 1. Calculate wOBA
-                const s = d.h - d.d - d.t - d.hr;
-                const woba_val = (0.69*d.bb + 0.89*s + 1.27*d.d + 1.62*d.t + 2.10*d.hr) / d.pa;
-                
-                // 2. wRAA
-                const raw_wRAA = ((woba_val - C.lg_woba) / C.woba_scale) * d.pa;
 
-                // 3. Park Adj
+                // 1. FIP Calculation (Standard Constant approx 3.10)
+                const fip = (13 * d.hr + 3 * d.bb - 2 * d.so) / d.ip + 3.10;
+
+                // 2. League Parameters
+                const est_lg_ip = d.lg_pa / 4.25;
+                const lg_r_9 = (d.lg_runs / est_lg_ip) * 9;
+
+                // 3. Park Adjustment
                 const pf = PARK_FACTORS[d.stadium].pf;
-                const parkAdj = (C.lg_r_pa - (pf * C.lg_r_pa)) * d.pa;
-                const battingRuns = raw_wRAA + parkAdj;
+                // Park Adjusted League RA9
+                const lg_ra9_park = lg_r_9 * pf;
+
+                // 4. Runs Above Average (RAA) based on FIP
+                // RAA = (League RA - Pitcher FIP) * IP / 9
+                const raa = (lg_ra9_park - fip) * (d.ip / 9);
+
+                // 5. Replacement Level Adjustment
+                // SP: +0.38 runs/9, RP: +0.47 runs/9 (approx)
+                const rep_bonus = d.role === 'sp' ? 0.38 : 0.47;
+                const rep_runs = rep_bonus * (d.ip / 9);
+
+                // 6. RAR (Runs Above Replacement) -> SPRAR or RPRAR
+                const rar = raa + rep_runs;
                 
-                // 4. Pos Adj
-                const posVals = {'dh':-15.1, '1b':-14.1, 'lf':-12.0, 'rf':-5.0, '3b':-4.8, '2b':3.4, 'cf':4.2, 'ss':10.3, 'c':18.1};
-                const posAdj = (posVals[d.pos] || 0) * (d.pa / 600);
-                
-                // 5. UZR & BaseRunning
-                const uzr = parseFloat(d.def) || 0;
-                const baseRunning = (d.sb * 0.2) || 0;
-                
-                // 6. Replacement Level
-                const repRuns = C.rep_per_pa * d.pa;
-                
-                // 7. Calc WAR
-                const totalRuns = battingRuns + uzr + baseRunning + posAdj + repRuns;
-                return (totalRuns / C.rpw).toFixed(1);
+                // Since inputs only allow one role, SPRAR+RPRAR is just RAR
+                return (rar / C.rpw).toFixed(1);
             }
         },
         {
@@ -952,7 +949,7 @@
         {
             id: "isod", category: "bat", title: "IsoD", full: "Isolated Discipline",
             short: "四死球による出塁能力。",
-            desc: "出塁率から打率を引いたもの。選球眼の良さを示す。",
+            desc: "出塁率から打率を引いて算出する。選球眼の良さを示す。",
             formula: `${formatVar('出塁率')} - ${formatVar('打率')}`,
             criteria: "0.06: 平均 / 0.10: 選球眼良",
             inputs: [{id:'obp', label:'出塁率'}, {id:'avg', label:'打率'}],
@@ -1022,6 +1019,30 @@
             calc: (d) => {
                 // xFIP Constant approx 3.10, HR/FB approx 10.5%
                 return ((13 * (d.fb * 0.105) + 3 * (d.bb + d.hbp) - 2 * d.so) / d.ip + 3.10).toFixed(2);
+            }
+        },
+        {
+            id: "siera", category: "pit", title: "SIERA", full: "Skill-Interactive Earned Run Average",
+            short: "打球の質や三振・四球を考慮した、FIPより精度の高い将来予測指標。",
+            desc: "ゴロ、フライ、内野フライの構成比や、それが三振・四球とどう組み合わさるかを考慮して計算される。投球の「質」を最も正確に反映するとされる指標の一つ。",
+            formula: `6.145 - 16.986×(SO/PA) + 11.434×(BB/PA) - 1.858×((GB-FB-PU)/PA) + ...`,
+            criteria: "防御率スケール",
+            related: ["fip", "xfip", "tra"],
+            inputs: [
+                {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, 
+                {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}, {id:'pu', label:'内野フライ'},
+                {id:'bf', label:'打者数'}
+            ],
+            calc: (d) => {
+                const pa = d.bf;
+                if(!pa) return "---";
+                
+                const A = d.so / pa;
+                const B = d.bb / pa;
+                const C = (d.gb - d.fb - d.pu) / pa;
+                
+                const val = 6.145 - 16.986*A + 11.434*B - 1.858*C + 7.653*Math.pow(A,2) + 6.664*Math.pow(C,2) + 10.130*A*C - 5.195*B*C;
+                return val.toFixed(2);
             }
         },
         {
@@ -1210,6 +1231,7 @@
     
     let currentFilter = 'all';
     let currentSearch = '';
+    let currentTermId = null; // Track currently open modal for OCR
 
     // Dark Mode Toggle Function
     function toggleTheme() {
@@ -1325,6 +1347,7 @@
     }
 
     function openModal(id) {
+        currentTermId = id; // Set current term ID
         const term = terms.find(t => t.id === id);
         if(!term) return;
 
@@ -1377,10 +1400,24 @@
 
             calcHtml = `
                 <div class="section-label">LABORATORY / ${aiText}</div>
-                <div class="calc-container ${aiClass}">
+                <div class="calc-container ${aiClass}" id="calc-container">
                     <div class="calc-title">
                         <div><span>${aiIcon}</span> ${term.title} Simulator</div>
                     </div>
+                    
+                    <!-- Preset Controls -->
+                    <div class="preset-bar">
+                        <div class="preset-label">💾 成績プリセット (自動入力)</div>
+                        <select class="preset-select" id="preset-select">
+                            <option value="">保存データを選択...</option>
+                        </select>
+                        <button type="button" class="preset-btn btn-load" onclick="loadPreset()">読込</button>
+                        <button type="button" class="preset-btn btn-del" onclick="removePreset()" title="削除">🗑️</button>
+                        <div style="flex-basis: 100%; height: 0; margin: 0;"></div> <!-- Line break for visual -->
+                        <input type="text" class="preset-input" id="preset-name" placeholder="新規保存名 (例: 2024山田)">
+                        <button type="button" class="preset-btn btn-save" onclick="savePreset()">保存</button>
+                    </div>
+
                     <div class="calc-inputs">
                         ${basicInputsHtml}
                         ${advancedSectionHtml}
@@ -1429,6 +1466,9 @@
         requestAnimationFrame(() => {
             modal.classList.add('show');
         });
+
+        // Initialize Preset List
+        updatePresetList();
     }
 
     // Logic to check advanced inputs
@@ -1439,7 +1479,6 @@
         const advInputs = document.querySelectorAll('.advanced-input');
         let isChanged = false;
 
-        // Simply check against DEFAULTS based on ID suffix
         advInputs.forEach(input => {
             const key = input.id.replace('calc-', '').toUpperCase();
             const defVal = DEFAULTS[key];
@@ -1451,7 +1490,7 @@
         warningBox.style.display = isChanged ? 'flex' : 'none';
     }
 
-    // Calculation Function (Global Scope for onclick)
+    // Calculation Function
     window.calculateMetric = function(id) {
         const term = terms.find(t => t.id === id);
         if(!term || !term.inputs) return;
@@ -1462,7 +1501,6 @@
         term.inputs.forEach(inp => {
             const el = document.getElementById(`calc-${inp.id}`);
             const val = el.value;
-            // Skip empty check for advanced inputs if they have defaults or values
             if(val === '' && inp.type !== 'select') allFilled = false;
             
             if(inp.type === 'select') {
@@ -1476,7 +1514,6 @@
 
         const result = term.calc(data);
         
-        // Animation effect
         const resDiv = document.getElementById('calc-result');
         resDiv.style.opacity = 0;
         resDiv.style.transform = "translateY(10px)";
@@ -1497,6 +1534,124 @@
 
     function closeModalOutside(e) {
         if (e.target === modal) closeModal();
+    }
+
+    /* --- Preset Logic (LocalStorage) --- */
+    const STORAGE_KEY = 'sabr_metrics_presets';
+
+    function getPresets() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            return stored ? JSON.parse(stored) : {};
+        } catch (e) {
+            console.error("Failed to parse presets", e);
+            return {};
+        }
+    }
+
+    function savePresets(presets) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+    }
+
+    function updatePresetList() {
+        const select = document.getElementById('preset-select');
+        if (!select) return;
+
+        const presets = getPresets();
+        select.innerHTML = '<option value="">保存データを選択...</option>';
+        
+        Object.keys(presets).forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
+        });
+    }
+
+    window.savePreset = function() {
+        const nameInput = document.getElementById('preset-name');
+        const name = nameInput.value.trim();
+        
+        if (!name) {
+            alert('保存名を入力してください');
+            return;
+        }
+
+        // Collect current input values
+        const inputs = document.querySelectorAll('.calc-field, .calc-select');
+        const data = {};
+        let hasData = false;
+
+        inputs.forEach(input => {
+            // Strip "calc-" prefix from ID
+            const key = input.id.replace('calc-', '');
+            if (input.value) {
+                data[key] = input.value;
+                hasData = true;
+            }
+        });
+
+        if (!hasData) {
+            alert('保存するデータがありません');
+            return;
+        }
+
+        const presets = getPresets();
+        if (presets[name] && !confirm(`"${name}" は既に存在します。上書きしますか？`)) {
+            return;
+        }
+
+        presets[name] = data;
+        savePresets(presets);
+        
+        updatePresetList();
+        document.getElementById('preset-select').value = name;
+        nameInput.value = ''; // clear input
+        alert(`"${name}" を保存しました`);
+    }
+
+    window.loadPreset = function() {
+        const select = document.getElementById('preset-select');
+        const name = select.value;
+        
+        if (!name) return;
+
+        const presets = getPresets();
+        const data = presets[name];
+        
+        if (data) {
+            let count = 0;
+            Object.keys(data).forEach(key => {
+                const el = document.getElementById(`calc-${key}`);
+                if (el) {
+                    el.value = data[key];
+                    // Visual feedback
+                    el.style.backgroundColor = "#f0fdf4";
+                    setTimeout(() => el.style.backgroundColor = "", 1000);
+                    count++;
+                }
+            });
+            
+            // Trigger advanced check if any advanced inputs were loaded
+            if (window.checkAdvancedChanges) window.checkAdvancedChanges();
+        }
+    }
+
+    window.removePreset = function() {
+        const select = document.getElementById('preset-select');
+        const name = select.value;
+        
+        if (!name) return;
+
+        // "Are you sure?" confirmation removed for easier deletion
+        const presets = getPresets();
+        if (presets[name]) {
+            delete presets[name];
+            savePresets(presets);
+            updatePresetList();
+            select.value = ""; // Reset selection
+            alert(`"${name}" を削除しました`);
+        }
     }
 
     // Initial Render
