@@ -364,6 +364,47 @@
         .calc-select { text-align: left; font-family: var(--font-sans); cursor: pointer; }
         .calc-field:focus, .calc-select:focus { outline: none; border-color: var(--cat-bat); ring: 2px rgba(14,165,233,0.2); }
 
+        /* --- Advanced Settings Style --- */
+        .advanced-details {
+            grid-column: 1 / -1;
+            margin-top: 10px;
+            border: 1px solid var(--c-border);
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(0,0,0,0.02);
+        }
+        .advanced-summary {
+            padding: 12px 15px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--c-text-secondary);
+            background: rgba(255,255,255,0.5);
+            user-select: none;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .advanced-summary::before {
+            content: '⚙️';
+            font-size: 1rem;
+        }
+        .advanced-summary:hover {
+            background: var(--c-surface);
+            color: var(--cat-bat);
+        }
+        .advanced-content {
+            padding: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 15px;
+            border-top: 1px solid var(--c-border);
+        }
+        .advanced-details[open] .advanced-summary {
+            border-bottom: 1px solid transparent;
+        }
+
         .calc-result-area {
             margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--c-border);
             display: flex; justify-content: flex-end; align-items: center; gap: 15px;
@@ -450,18 +491,16 @@
     // --- Data Helper ---
     const formatVar = (text) => `<span class="var">${text}</span>`;
 
-    // --- Constants ---
-    const CONST = {
-        RPW: 8.5,
-        REP_LEVEL_PER_600: 15.5,
-        LG_TRA: 3.30, // Changed from 3.80 to 3.30
-        LG_WOBA: 0.304,
-        WOBA_SCALE: 1.24,
-        LG_TOTAL_RUNS: 2800,
-        LG_TOTAL_PA: 32000
+    // --- Constants (Default Values: Based on approx NPB 2023 averages) ---
+    const DEFAULTS = {
+        // リーグ全体の統計（デフォルト値）
+        LG_PA: 32000,
+        LG_RUNS: 2800,
+        LG_HITS: 8000,
+        LG_HR: 800,
+        LG_OPS: 0.680
+        // wOBA Scale は自動計算するため削除
     };
-    // Derived R/PA
-    CONST.LG_R_PA = CONST.LG_TOTAL_RUNS / CONST.LG_TOTAL_PA; // 0.0875
 
     // Park Factors
     const PARK_FACTORS = {
@@ -480,89 +519,136 @@
         'rakuten':  {name: '楽天モバイル (0.94)', pf: 0.94}
     };
 
+    // --- Helper to calculate Derived Constants ---
+    function calcDerived(d) {
+        const lg_r_pa = d.lg_runs / d.lg_pa;
+        
+        // 1. RPW = 20 * (R/IP). IP is estimated as PA / 4.25
+        const est_lg_ip = d.lg_pa / 4.25;
+        const rpw = 20 * (d.lg_runs / est_lg_ip);
+        
+        // 2. Replacement Level (Runs per PA) = 0.12 * (R/PA)
+        const rep_per_pa = 0.12 * lg_r_pa;
+
+        // 3. wOBA Scale Calculation: Scale = Lg_OBP / Lg_Raw_wOBA
+        // Since BB and XBH breakdowns are unknown, we estimate them using standard ratios.
+        const est_bb = d.lg_pa * 0.09; // Assume 9% BB rate
+        const est_obp = (d.lg_hits + est_bb) / d.lg_pa; // Simple OBP est
+        
+        // Estimate Raw wOBA components
+        // Breakdown hits: HR is known. Assume remaining hits are 75% 1B, 20% 2B, 5% 3B
+        const non_hr_hits = d.lg_hits - d.lg_hr;
+        const est_1b = non_hr_hits * 0.75;
+        const est_2b = non_hr_hits * 0.20;
+        const est_3b = non_hr_hits * 0.05;
+        
+        // Raw wOBA weights (Standard values)
+        const raw_woba_numerator = (0.69 * est_bb) + (0.89 * est_1b) + (1.27 * est_2b) + (1.62 * est_3b) + (2.10 * d.lg_hr);
+        const lg_raw_woba = raw_woba_numerator / d.lg_pa;
+        
+        const woba_scale = est_obp / lg_raw_woba;
+        
+        // Lg wOBA (Scaled) for calculation
+        const lg_woba = lg_raw_woba * woba_scale; // effectively est_obp
+        
+        // Lg tRA estimation (approx related to R/IP)
+        const lg_tra = (d.lg_runs / est_lg_ip) * 9 * 0.92;
+
+        return { lg_r_pa, rpw, rep_per_pa, lg_woba, lg_tra, woba_scale };
+    }
+
     // --- Terms Database ---
     const terms = [
         /* ---------------- 総合 (Total) ---------------- */
         {
             id: "war", category: "tot", title: "WAR (野手)", full: "Wins Above Replacement (Batter)",
             short: "打撃、走塁、守備を総合的に評価して野手の貢献度を表す指標。",
-            desc: "代替可能な控え選手（リプレイスメント・レベルの選手）が出場する場合に比べてどれだけチームの勝利数を増やしたかによって計算される。式中のRPW（Runs Per Win）とは、勝利をひとつ増やすのに対応する得点数のこと（近年だと約8.5）。",
+            desc: "代替可能な控え選手（リプレイスメント・レベルの選手）が出場する場合に比べてどれだけチームの勝利数を増やしたかによって計算される。<br>この計算機では、リーグ総得点や総打席数からRPW（勝利あたりの得点）、代替水準、wOBA Scaleを自動計算します。",
             formula: `(wRAA + UZR + BaseRunning + ポジション補正 + 代替水準補正) ÷ RPW`,
             criteria: "2.0: レギュラー / 5.0: スター / 8.0: MVP",
-            related: ["wraa", "uzr", "woba"],
-            aiMode: true, // AI ESTIMATION FLAG
+            related: ["wraa", "uzr", "woba", "rpw"],
+            aiMode: true,
             inputs: [
                 {id:'pa', label:'打席数'}, {id:'h', label:'安打'}, {id:'hr', label:'本塁打'}, 
                 {id:'bb', label:'四球'}, {id:'sb', label:'盗塁'},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 {id:'pos', label:'守備位置', type:'select', options:{'dh':'DH (-15.1)', '1b':'一塁 (-14.1)', 'lf':'左翼 (-12.0)', 'rf':'右翼 (-5.0)', '3b':'三塁 (-4.8)', '2b':'二塁 (+3.4)', 'cf':'中堅 (+4.2)', 'ss':'遊撃 (+10.3)', 'c':'捕手 (+18.1)'}},
-                {id:'def', label:'守備評価', type:'select', options:{'0':'平均的 (0)', '5':'上手い (+5)', '10':'名手 (+10)', '15':'神 (+15)', '-5':'苦手 (-5)', '-10':'下手 (-10)'}}
+                {id:'def', label:'守備評価', type:'select', options:{'0':'平均的 (0)', '5':'上手い (+5)', '10':'名手 (+10)', '15':'神 (+15)', '-5':'苦手 (-5)', '-10':'下手 (-10)'}},
+                // Advanced Settings
+                {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
+                {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
+                {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
+                {id:'lg_hr', label:'リーグ総本塁打', type:'number', advanced:true, default: DEFAULTS.LG_HR},
+                {id:'lg_ops', label:'リーグ平均OPS', type:'number', advanced:true, default: DEFAULTS.LG_OPS}
             ],
             calc: (d) => {
-                // 1. Estimate wOBA (Approximation with 1B/2B/3B estimation)
+                const C = calcDerived(d);
+                
+                // 1. Estimate wOBA
                 const non_hr_hits = d.h - d.hr;
                 const est_1b = non_hr_hits * 0.78;
                 const est_2b = non_hr_hits * 0.20;
                 const est_3b = non_hr_hits * 0.02;
-                
                 const woba_approx = (0.69*d.bb + 0.89*est_1b + 1.27*est_2b + 1.62*est_3b + 2.10*d.hr) / d.pa;
                 
-                // 2. Raw wRAA
-                const raw_wRAA = ((woba_approx - CONST.LG_WOBA) / CONST.WOBA_SCALE) * d.pa;
+                // 2. wRAA using calculated Scale and Lg wOBA
+                const raw_wRAA = ((woba_approx - C.lg_woba) / C.woba_scale) * d.pa;
 
-                // 3. Park Adjustment for Batting Runs
+                // 3. Park Adj = (Lg_R/PA - PF * Lg_R/PA) * PA
                 const pf = PARK_FACTORS[d.stadium].pf;
-                // Park Adj = (Lg_R/PA - PF * Lg_R/PA) * PA
-                const parkAdj = (CONST.LG_R_PA - (pf * CONST.LG_R_PA)) * d.pa;
-                
+                const parkAdj = (C.lg_r_pa - (pf * C.lg_r_pa)) * d.pa;
                 const battingRuns = raw_wRAA + parkAdj;
                 
-                // 4. Positional Adjustment (DELTA Values, Pro-rated by PA/600)
+                // 4. Pos Adj
                 const posVals = {'dh':-15.1, '1b':-14.1, 'lf':-12.0, 'rf':-5.0, '3b':-4.8, '2b':3.4, 'cf':4.2, 'ss':10.3, 'c':18.1};
                 const posAdj = (posVals[d.pos] || 0) * (d.pa / 600);
                 
-                // 5. UZR & BaseRunning Estimation
+                // 5. UZR & BaseRunning
                 const uzr = parseFloat(d.def) || 0;
-                const baseRunning = (d.sb * 0.2) || 0; // Simple run value
+                const baseRunning = (d.sb * 0.2) || 0;
                 
-                // 6. Replacement Level (15.5 runs per 600 PA)
-                const repLevel = CONST.REP_LEVEL_PER_600 * (d.pa / 600);
+                // 6. Replacement Level = RepRun/PA * PA
+                const repRuns = C.rep_per_pa * d.pa;
                 
                 // 7. Calc WAR
-                const totalRuns = battingRuns + uzr + baseRunning + posAdj + repLevel;
-                const war = totalRuns / CONST.RPW;
-                
-                return war.toFixed(1);
+                const totalRuns = battingRuns + uzr + baseRunning + posAdj + repRuns;
+                return (totalRuns / C.rpw).toFixed(1);
             }
         },
         {
             id: "wrc_plus", category: "bat", title: "wRC+", full: "weighted Runs Created Plus",
             short: "打撃の傑出度を評価する指標",
-            desc: "打席あたりの得点創出の多さを平均的な打者を100とした場合のパーセンテージで評価する指標。wRC+が130であればリーグの平均的な打者の1.3倍の効率で得点を生産する打者であるといえる。",
+            desc: "打席あたりの得点創出の多さを平均的な打者を100とした場合のパーセンテージで評価する指標。",
             formula: `(((wRAA/打席 + R/PA) + (R/PA - PF×R/PA)) ÷ R/PA) × 100`,
             criteria: "100: 平均 / 160: MVP候補 / 200: 歴史的",
             related: ["woba", "wraa"],
             aiMode: true,
             inputs: [
                 {id:'pa', label:'打席数'}, {id:'h', label:'安打'}, {id:'hr', label:'本塁打'}, {id:'bb', label:'四球'},
-                {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})}
+                {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
+                // Advanced Settings
+                {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
+                {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
+                {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
+                {id:'lg_hr', label:'リーグ総本塁打', type:'number', advanced:true, default: DEFAULTS.LG_HR},
+                {id:'lg_ops', label:'リーグ平均OPS', type:'number', advanced:true, default: DEFAULTS.LG_OPS}
             ],
             calc: (d) => {
+                const C = calcDerived(d);
                 const pf = PARK_FACTORS[d.stadium].pf;
                 
-                // 1. Raw wOBA Estimation (using 1B approx)
+                // wOBA Est
                 const non_hr_hits = d.h - d.hr;
                 const est_1b = non_hr_hits * 0.78;
                 const est_2b = non_hr_hits * 0.20;
                 const est_3b = non_hr_hits * 0.02;
-                
                 const woba_est = (0.69*d.bb + 0.89*est_1b + 1.27*est_2b + 1.62*est_3b + 2.10*d.hr) / d.pa;
                 
-                // 2. Raw wRAA
-                const raw_wraa = ((woba_est - CONST.LG_WOBA) / CONST.WOBA_SCALE) * d.pa;
+                // wRAA
+                const raw_wraa = ((woba_est - C.lg_woba) / C.woba_scale) * d.pa;
                 
-                // 3. wRC+ Calc
-                const wrc_plus_val = (((raw_wraa / d.pa) + CONST.LG_R_PA + (CONST.LG_R_PA - (pf * CONST.LG_R_PA))) / CONST.LG_R_PA) * 100;
+                // wRC+ Calc
+                const wrc_plus_val = (((raw_wraa / d.pa) + C.lg_r_pa + (C.lg_r_pa - (pf * C.lg_r_pa))) / C.lg_r_pa) * 100;
                 
                 return wrc_plus_val.toFixed(0);
             }
@@ -570,41 +656,51 @@
         {
             id: "pit_war", category: "tot", title: "WAR (投手)", full: "Wins Above Replacement (Pitcher)",
             short: "投球を総合的に評価して投手の貢献度を表す指標。",
-            desc: "代替可能な控え選手（リプレイスメント・レベルの選手）が出場する場合に比べてどれだけチームの勝利数を増やしたかによって計算される。式中のRPW（Runs Per Win）とは、勝利をひとつ増やすのに対応する得点数のこと（近年だと約8.5）。",
+            desc: "代替可能な控え選手に比べてどれだけ勝利数を増やしたか。<br>RPW = 20 * (R/IP) の式を用いて計算します。",
             formula: `(SPRAR + RPRAR) ÷ RPW`,
             criteria: "2.0: ローテ投手 / 4.0: エース",
-            related: ["fip", "tra", "rsaa"],
+            related: ["fip", "tra", "rsaa", "rpw"],
             aiMode: true,
             inputs: [
                 {id:'ip', label:'投球回'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, {id:'hr', label:'被本塁打'},
                 {id:'role', label:'役割', type:'select', options:{'sp':'先発', 'rp':'救援'}},
-                {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})}
+                {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
+                // Advanced Settings
+                {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
+                {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
+                {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
+                {id:'lg_hr', label:'リーグ総本塁打', type:'number', advanced:true, default: DEFAULTS.LG_HR},
+                {id:'lg_ops', label:'リーグ平均OPS', type:'number', advanced:true, default: DEFAULTS.LG_OPS}
             ],
             calc: (d) => {
-                // 1. 簡易tRA (FIPベース) の推定
+                const C = calcDerived(d);
+
+                // 1. 簡易tRA
                 const raw_tra = ((13 * d.hr + 3 * d.bb - 2 * d.so) / d.ip) + 3.10;
                 
-                // 2. PF補正後tRA
+                // 2. PF補正
                 const pf = PARK_FACTORS[d.stadium].pf;
                 const adj_tra = raw_tra / pf;
                 
-                // 3. 守備から独立したアウト数 (簡易的に IP * 3)
+                // 3. SPRAR/RPRAR
                 let sprar = 0;
                 let rprar = 0;
-                
                 if (d.role === 'sp') {
-                    // SPRAR = (1.19 * Lg_tRA + 0.30 - Adj_tRA) / 9 * IP
-                    sprar = (1.19 * CONST.LG_TRA + 0.30 - adj_tra) / 9 * d.ip;
+                    sprar = (1.19 * C.lg_tra + 0.30 - adj_tra) / 9 * d.ip;
                 } else {
-                    // RPRAR = (1.19 * Lg_tRA - 0.55 - Adj_tRA) / 9 * IP
-                    rprar = (1.19 * CONST.LG_TRA - 0.55 - adj_tra) / 9 * d.ip;
+                    rprar = (1.19 * C.lg_tra - 0.55 - adj_tra) / 9 * d.ip;
                 }
                 
-                // 4. WAR
-                const war = (sprar + rprar) / CONST.RPW;
-                
-                return war.toFixed(1);
+                return ((sprar + rprar) / C.rpw).toFixed(1);
             }
+        },
+        {
+            id: "rpw", category: "tot", title: "RPW", full: "Runs Per Win",
+            short: "勝利を1つ増やすのに必要な得点数。",
+            desc: "「1勝の重み」を得点換算したもの。設定された式「20 × (R/IP)」で計算される場合、1イニングあたりの得点が多い（打高）ほど1勝に必要な得点も増える。",
+            formula: `20 × (リーグ総得点 ÷ リーグ総投球回)`,
+            criteria: "8.5 ～ 10.0",
+            related: ["war", "pythag"]
         },
         {
             id: "wpa", category: "tot", title: "WPA", full: "Win Probability Added",
@@ -1164,6 +1260,29 @@
         render();
     }
 
+    function createInputHtml(inp) {
+        if(inp.type === 'select') {
+            const opts = Object.keys(inp.options).map(k => `<option value="${k}">${inp.options[k]}</option>`).join('');
+            return `
+                <div class="calc-group">
+                    <label class="calc-label">${inp.label}</label>
+                    <select class="calc-select" id="calc-${inp.id}">
+                        ${opts}
+                    </select>
+                </div>
+            `;
+        } else {
+            // Handle default value if present
+            const defaultVal = inp.default !== undefined ? inp.default : '';
+            return `
+                <div class="calc-group">
+                    <label class="calc-label">${inp.label}</label>
+                    <input type="number" class="calc-field" id="calc-${inp.id}" placeholder="0" value="${defaultVal}">
+                </div>
+            `;
+        }
+    }
+
     function openModal(id) {
         const term = terms.find(t => t.id === id);
         if(!term) return;
@@ -1182,28 +1301,31 @@
         // Build Calculator HTML if inputs exist
         let calcHtml = '';
         if(term.inputs && term.calc) {
-            const inputsHtml = term.inputs.map(inp => {
-                if(inp.type === 'select') {
-                    // Dropdown input
-                    const opts = Object.keys(inp.options).map(k => `<option value="${k}">${inp.options[k]}</option>`).join('');
-                    return `
-                        <div class="calc-group">
-                            <label class="calc-label">${inp.label}</label>
-                            <select class="calc-select" id="calc-${inp.id}">
-                                ${opts}
-                            </select>
-                        </div>
-                    `;
+            const basicInputs = [];
+            const advancedInputs = [];
+
+            term.inputs.forEach(inp => {
+                if (inp.advanced) {
+                    advancedInputs.push(inp);
                 } else {
-                    // Number input
-                    return `
-                        <div class="calc-group">
-                            <label class="calc-label">${inp.label}</label>
-                            <input type="number" class="calc-field" id="calc-${inp.id}" placeholder="0">
-                        </div>
-                    `;
+                    basicInputs.push(inp);
                 }
-            }).join('');
+            });
+
+            const basicInputsHtml = basicInputs.map(inp => createInputHtml(inp)).join('');
+            
+            let advancedSectionHtml = '';
+            if (advancedInputs.length > 0) {
+                const advInputsHtml = advancedInputs.map(inp => createInputHtml(inp)).join('');
+                advancedSectionHtml = `
+                    <details class="advanced-details">
+                        <summary class="advanced-summary">詳細設定 (リーグ平均値など)</summary>
+                        <div class="advanced-content">
+                            ${advInputsHtml}
+                        </div>
+                    </details>
+                `;
+            }
 
             const aiClass = term.aiMode ? 'ai-mode' : '';
             const aiIcon = term.aiMode ? '🤖' : '🧮';
@@ -1216,7 +1338,8 @@
                         <div><span>${aiIcon}</span> ${term.title} Simulator</div>
                     </div>
                     <div class="calc-inputs">
-                        ${inputsHtml}
+                        ${basicInputsHtml}
+                        ${advancedSectionHtml}
                     </div>
                     <button class="calc-btn" onclick="calculateMetric('${term.id}')">
                         ${aiText}
@@ -1275,6 +1398,7 @@
         term.inputs.forEach(inp => {
             const el = document.getElementById(`calc-${inp.id}`);
             const val = el.value;
+            // Skip empty check for advanced inputs if they have defaults or values
             if(val === '' && inp.type !== 'select') allFilled = false;
             
             if(inp.type === 'select') {
