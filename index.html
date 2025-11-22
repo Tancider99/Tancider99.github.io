@@ -776,6 +776,116 @@
         <!-- Generated -->
     </div>
 
+    <footer class="footer-area">
+        <details class="footer-details">
+            <summary class="footer-summary">
+                <span class="footer-icon" id="footer-icon-book"></span> 
+                <span>計算ロジックの説明・参考サイト</span>
+            </summary>
+            <div class="footer-content">
+                <div style="margin-bottom: 30px;">
+                    <h3>計算ロジックについて</h3>
+                    <p>
+                        当サイトで計算される指標は、一般的なセイバーメトリクスの定義に基づいています。<br>
+                        ただし、入力項目では完全な値を算出できない指標（外野フライ数など）は、リーグ平均の値を基におおよその値を算出しています。<br>
+                        本ツールでは、デフォルト値として近年のNPB平均値に近い概算値を使用しているため、厳密な公式記録とは異なる場合があります。<br>
+                        より正確な値を求めたい場合は、各計算画面の「詳細設定」からリーグ総合成績などのパラメータを調整してください。
+                    </p>
+                </div>
+
+                <div style="margin-bottom: 30px;">
+                    <h3>主要指標の詳細計算ロジック（本サイト内の処理）</h3>
+                    
+                    <div class="logic-box">
+                        <div class="logic-title">野手WAR <span class="logic-cat bat">Batting</span></div>
+                        <div class="logic-formula">
+                            WAR = (攻撃貢献 + 守備貢献 + 走塁貢献 + 守備位置補正 + 代替水準補正) ÷ RPW
+                        </div>
+                        <div class="logic-desc">
+                            まずリーグ総合成績（詳細設定の値）から、その環境における各プレーの得点価値（wOBA係数）を動的に算出します。
+                            算出した係数を用いて対象選手のwOBAを求め、リーグ平均と比較して「平均的打者よりどれだけ得点を生み出したか（wRAA）」を計算します。
+                            これに本拠地のパークファクター補正、守備位置ごとの難易度補正、入力された守備評価(UZR)と走塁貢献(wSB)を加算します。
+                            最後に、出場打席数に応じた「代替可能選手（リプレイスメント・レベル）との差分」を加え、1勝あたりの得点価値(RPW)で割ることで勝利数に換算しています。
+                        </div>
+                    </div>
+
+                    <div class="logic-box">
+                        <div class="logic-title">wRC+ <span class="logic-cat bat">Batting</span></div>
+                        <div class="logic-formula">
+                            wRC+ = ( (パークファクター補正後の得点創出能力) ÷ リーグ平均得点力 ) × 100
+                        </div>
+                        <div class="logic-desc">
+                            上記で算出したwRAA（平均より増やした得点数）に対し、本拠地のパークファクターに基づく補正を行います（打者有利な球場ならマイナス、不利ならプラス）。
+                            補正後の値を打席あたりの得点生産力に換算し、「リーグ平均を100とした場合の指数」として正規化しています。
+                            これにより、球場の違いを排除して打撃傑出度を比較可能にしています。
+                        </div>
+                    </div>
+
+                    <div class="logic-box">
+                        <div class="logic-title">投手WAR <span class="logic-cat pit">Pitching</span></div>
+                        <div class="logic-formula">
+                            WAR = (平均比失点抑止量 + 代替水準補正) ÷ RPW
+                        </div>
+                        <div class="logic-desc">
+                            本ツールではFIP（守備の影響を除いた疑似防御率）をベースに計算しています。
+                            まず対象投手のFIPと、パークファクター補正をかけたリーグ平均失点率(RA9)を比較し、平均に対してどれだけ失点を防いだか(RAA)を算出します。
+                            そこに役割（先発・救援）に応じた「代替水準投手との差分」を加算し、RPWで割ることで勝利貢献数を算出しています。
+                            ※FIP定数はリーグ総合成績から自動計算されます。
+                        </div>
+                    </div>
+
+                    <div class="logic-box">
+                        <div class="logic-title">xFIP <span class="logic-cat pit">Pitching</span></div>
+                        <div class="logic-formula">
+                            xFIP = (13 × (推定フライ数 × リーグHR/FB率) + 3×(BB+HBP) - 2×SO) ÷ IP + 定数
+                        </div>
+                        <div class="logic-desc">
+                            入力された「打球傾向(GB%)」に基づき、全打球に対するゴロ・ライナー・フライの内訳を自動推定します。
+                            そのうちフライボール(FB)に対して「リーグ平均のHR/FB率（フライが本塁打になる確率）」を適用することで、「運に左右されない期待被本塁打数」を算出します。
+                            この期待値を用いてFIPの式を再計算し、リーグ平均防御率のスケールに合うよう定数（リーグ平均RA9とリーグ平均xFIPの差分）を加算して調整しています。
+                        </div>
+                    </div>
+
+                    <div class="logic-box">
+                        <div class="logic-title">tRA <span class="logic-cat pit">Pitching</span></div>
+                        <div class="logic-formula">
+                            tRA = ( Σ(各イベント数 × 期待失点価値) ) ÷ IP × 27 + 定数
+                        </div>
+                        <div class="logic-desc">
+                            入力データと打球傾向から、三振、四死球、被本塁打に加え、ゴロ(GB)、ライナー(LD)、外野フライ(FB)、内野フライ(PU)の各打球数を推定します。
+                            それぞれのイベントに対して統計的に導き出された「期待失点ウェイト（例：被本塁打=1.401, ライナー=0.289, 三振=-0.108など）」を掛け合わせ、総失点期待値を算出します。
+                            これを27アウト（9イニング）あたりに換算し、リーグ全体の失点率スケールに合わせるための定数を加えて表示しています。
+                        </div>
+                    </div>
+
+                    <div class="logic-box">
+                        <div class="logic-title">SIERA <span class="logic-cat pit">Pitching</span></div>
+                        <div class="logic-formula">
+                            SIERA = 6.145 - 16.99(K%) + 11.43(BB%) - 1.86(GB%) ... [多項式]
+                        </div>
+                        <div class="logic-desc">
+                            打球傾向から推定したゴロ率(GB%)と、奪三振率(K%)、与四球率(BB%)などを用い、それらの二乗項や相互作用項（例：奪三振率×ゴロ率）を含む複雑な回帰式によって計算しています。
+                            「奪三振率が高い投手は打たれたゴロもヒットになりにくい」「与四球が多い投手はゴロ率が高いと併殺を取りやすい」といった指標間の相乗効果を数式化し、投球の質をより詳細に評価しています。
+                        </div>
+                    </div>
+
+                </div>
+                
+                <div>
+                    <h3>参考にしたサイト</h3>
+                    <ul>
+                        <li><a href="https://1point02.jp/op/index.aspx" target="_blank" rel="noopener noreferrer">1.02 - Essence of Baseball</a></li>
+                        <li><a href="https://www.baseballprospectus.com/news/article/10027/introducing-siera-part-1/" target="_blank" rel="noopener noreferrer">Baseball Prospectus</a></li>
+                        <li><a href="http://bbalone.blog119.fc2.com/blog-entry-551.html" target="_blank" rel="noopener noreferrer">Baseball Concrete Blog</a></li>
+                        <li><a href="https://l-data-daily.com/post-1763/" target="_blank" rel="noopener noreferrer">セイバーメトリクス指標・用語辞典</a></li>
+                        <li><a href="https://bo-no05.hatenadiary.org/" target="_blank" rel="noopener noreferrer">ぼーののブログ</a></li>
+                        <li><a href="https://ranzankeikoku.blog.fc2.com/blog-entry-6591.html" target="_blank" rel="noopener noreferrer">日本プロ野球RCAA&PitchingRunまとめblog</a></li>
+                    </ul>
+                </div>
+            </div>
+        </details>
+    </footer>
+    
     <div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
         <div class="modal-panel">
             <div class="modal-header" id="modal-header">
