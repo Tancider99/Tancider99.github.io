@@ -666,8 +666,8 @@
             inputs: [
                 {id:'pa', label:'打席数'}, {id:'ab', label:'打数'},
                 {id:'h', label:'安打'}, {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, 
-                {id:'bb', label:'四球'}, {id:'hbp', label:'死球'}, 
-                {id:'sf', label:'犠飛'}, {id:'sh', label:'犠打'},
+                {id:'bb', label:'四球'}, {id:'hbp', label:'死球', default:0}, 
+                {id:'sf', label:'犠飛', default:0}, {id:'sh', label:'犠打', default:0},
                 {id:'sb', label:'盗塁'}, {id:'cs', label:'盗塁死'},
                 
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
@@ -742,8 +742,8 @@
             inputs: [
                 {id:'pa', label:'打席数'}, {id:'ab', label:'打数'},
                 {id:'h', label:'安打'}, {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, 
-                {id:'bb', label:'四球'}, {id:'hbp', label:'死球'}, 
-                {id:'sf', label:'犠飛'}, {id:'sh', label:'犠打'},
+                {id:'bb', label:'四球'}, {id:'hbp', label:'死球', default:0}, 
+                {id:'sf', label:'犠飛', default:0}, {id:'sh', label:'犠打', default:0},
 
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
@@ -1211,6 +1211,24 @@
             calc: (d) => (d.bb * 9 / d.ip).toFixed(2)
         },
         {
+            id: "k_pct_pit", category: "pit", title: "K%", full: "Strikeout Percentage (Pitcher)",
+            short: "対戦打者に占める奪三振の割合。",
+            desc: "奪三振率(K/9)よりも投球回数に依存せず、投手の支配力を正確に表す指標。",
+            formula: `${formatVar('奪三振')} ÷ ${formatVar('打者数')}`,
+            criteria: "20%: 平均 / 30%: 優秀",
+            inputs: [{id:'so', label:'奪三振'}, {id:'bf', label:'打者数'}],
+            calc: (d) => ((d.so / d.bf) * 100).toFixed(1) + '%'
+        },
+        {
+            id: "bb_pct_pit", category: "pit", title: "BB%", full: "Walk Percentage (Pitcher)",
+            short: "対戦打者に占める与四球の割合。",
+            desc: "与四球率(BB/9)よりも投球回数に依存せず、制球力を正確に表す指標。",
+            formula: `${formatVar('与四球')} ÷ ${formatVar('打者数')}`,
+            criteria: "8%: 平均 / 5%以下: 優秀",
+            inputs: [{id:'bb', label:'与四球'}, {id:'bf', label:'打者数'}],
+            calc: (d) => ((d.bb / d.bf) * 100).toFixed(1) + '%'
+        },
+        {
             id: "k_bb_pit", category: "pit", title: "K/BB", full: "K-to-BB Ratio",
             short: "奪三振と与四球の比率。",
             desc: "投手の完成度・安定感を示す重要指標。3.5を超えると非常に優秀とされる。",
@@ -1220,45 +1238,45 @@
             calc: (d) => (d.so / d.bb).toFixed(2)
         },
         {
-            id: "hr_9", category: "pit", title: "HR/9", full: "Home Runs per 9",
-            short: "被本塁打率。",
-            formula: `${formatVar('被本塁打')} × 9 ÷ ${formatVar('投球回')}`,
-            criteria: "1.0未満が望ましい",
-            inputs: [{id:'hr', label:'被本塁打'}, {id:'ip', label:'投球回'}],
-            calc: (d) => (d.hr * 9 / d.ip).toFixed(2)
+            id: "noi", category: "bat", title: "NOI", full: "New Offensive Index",
+            short: "出塁率＋長打率÷3。",
+            desc: "OPSの簡易修正版。出塁率の価値を長打率の3倍と見積もって計算する。日本独自の指標。",
+            formula: `(${formatVar('出塁率')} + ${formatVar('長打率')} ÷ 3) × 1000`,
+            criteria: "450: 平均 / 550: 優秀",
+            inputs: [{id:'obp', label:'出塁率'}, {id:'slg', label:'長打率'}],
+            calc: (d) => ((d.obp + d.slg / 3) * 1000).toFixed(0)
         },
         {
-            id: "dice", category: "pit", title: "DICE", full: "Defense Independent Component ERA",
-            short: "FIPとほぼ同じ概念の指標。",
-            desc: "FIPと計算式が非常に似ているが、係数が微妙に異なる。守備に依存しない投球内容を評価する。",
-            formula: `3.00 + (13×${formatVar('HR')} + 3×(${formatVar('四球')}+${formatVar('死球')}) - 2×${formatVar('三振')}) ÷ ${formatVar('IP')}`,
-            criteria: "防御率スケール",
-            inputs: [{id:'hr', label:'HR'}, {id:'bb', label:'四球'}, {id:'hbp', label:'死球'}, {id:'so', label:'三振'}, {id:'ip', label:'IP'}],
-            calc: (d) => (3.00 + (13*d.hr + 3*(d.bb+d.hbp) - 2*d.so)/d.ip).toFixed(2)
-        },
-        {
-            id: "lob_pct", category: "pit", title: "LOB%", full: "Left On Base Percentage",
-            short: "残塁率（ランナーを返さなかった割合）。",
-            desc: "投手の粘り強さを示すが、BABIP同様に運の要素も強い。平均は約72%で、極端に高い場合は翌年は揺り戻しが警戒される。",
-            formula: `(${formatVar('H')}+${formatVar('BB')}-${formatVar('R')}) ÷ (${formatVar('H')}+${formatVar('BB')}-1.4×${formatVar('HR')})`,
-            criteria: "72%前後",
-            inputs: [{id:'h', label:'被安打'}, {id:'bb', label:'与四球'}, {id:'r', label:'失点'}, {id:'hr', label:'被HR'}],
-            calc: (d) => (((d.h+d.bb-d.r)/(d.h+d.bb-1.4*d.hr))*100).toFixed(1) + '%'
-        },
-        {
-            id: "pfr", category: "pit", title: "PFR", full: "Power/Finesse Ratio",
-            short: "投手のタイプ（本格派/技巧派）を分類する指標。",
-            desc: "奪三振と与四球の合計による評価。高いほど三振が取れて四球を出さない「パワーピッチャー」寄り。",
-            formula: `(${formatVar('奪三振')} + ${formatVar('与四球')}) ÷ ${formatVar('投球回')}`,
-            criteria: "-",
-            inputs: [{id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, {id:'ip', label:'投球回'}],
-            calc: (d) => ((d.so + d.bb) / d.ip).toFixed(2)
-        },
-        {
-            id: "ld_pct", category: "pit", title: "LD%", full: "Line Drive Percentage",
+            id: "ld_pct_bat", category: "bat", title: "LD%", full: "Line Drive Percentage (Batter)",
             short: "全打球に占めるライナーの割合。",
-            desc: "ライナー性の打球はヒットになりやすいため、この数値が高い投手はBABIPが高くなりやすい傾向がある。",
+            desc: "ライナーはヒットになる確率が最も高い打球。高いほどBABIPが高くなりやすい。",
             formula: `${formatVar('LD')} ÷ (${formatVar('LD')}+${formatVar('GB')}+${formatVar('FB')})`,
+            criteria: "20%: 平均",
+            inputs: [{id:'ld', label:'ライナー'}, {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}],
+            calc: (d) => (d.ld / (d.ld + d.gb + d.fb) * 100).toFixed(1) + '%'
+        },
+        {
+            id: "gb_pct_bat", category: "bat", title: "GB%", full: "Ground Ball Percentage (Batter)",
+            short: "全打球に占めるゴロの割合。",
+            desc: "ゴロが多い打者は併殺打のリスクが高いが、足が速ければ内野安打も狙える。",
+            formula: `${formatVar('GB')} ÷ (${formatVar('LD')}+${formatVar('GB')}+${formatVar('FB')})`,
+            criteria: "45%: 平均",
+            inputs: [{id:'ld', label:'ライナー'}, {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}],
+            calc: (d) => (d.gb / (d.ld + d.gb + d.fb) * 100).toFixed(1) + '%'
+        },
+        {
+            id: "fb_pct_bat", category: "bat", title: "FB%", full: "Fly Ball Percentage (Batter)",
+            short: "全打球に占めるフライの割合。",
+            desc: "フライが多い打者は長打（本塁打）の可能性が高い。",
+            formula: `${formatVar('FB')} ÷ (${formatVar('LD')}+${formatVar('GB')}+${formatVar('FB')})`,
+            criteria: "35%: 平均",
+            inputs: [{id:'ld', label:'ライナー'}, {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}],
+            calc: (d) => (d.fb / (d.ld + d.gb + d.fb) * 100).toFixed(1) + '%'
+        },
+        
+        /* ---------------- 投球 (Pitching) ---------------- */
+        {
+            id: "era", category: "std", title: "ERA", full: "Earned Run Average",
             criteria: "10%: 平均",
             inputs: [{id:'ld', label:'ライナー'}, {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}],
             calc: (d) => (d.ld / (d.ld + d.gb + d.fb) * 100).toFixed(1) + '%'
@@ -1684,7 +1702,7 @@
     /* --- Batch Calculator Logic --- */
     function openBatchCalc(mode) {
         const isBat = mode === 'bat';
-        const title = isBat ? "野手指標 一括計算" : "投手指標 一括計算";
+        const title = isBat ? "野手指標 一括計算 (Batch Batter)" : "投手指標 一括計算 (Batch Pitcher)";
         const catColor = isBat ? getCatColor('bat') : getCatColor('pit');
         
         // Define input fields for batch mode
@@ -1693,9 +1711,9 @@
             fields = [
                 {id:'pa', label:'打席数'}, {id:'ab', label:'打数'},
                 {id:'h', label:'安打'}, {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'},
-                {id:'bb', label:'四球'}, {id:'hbp', label:'死球'}, {id:'so', label:'三振'},
-                {id:'sf', label:'犠飛'}, {id:'sh', label:'犠打'},
-                {id:'sb', label:'盗塁'}, {id:'cs', label:'盗塁死'},
+                {id:'bb', label:'四球'}, {id:'hbp', label:'死球', default:0}, {id:'so', label:'三振', default:0},
+                {id:'sf', label:'犠飛', default:0}, {id:'sh', label:'犠打', default:0},
+                {id:'sb', label:'盗塁', default:0}, {id:'cs', label:'盗塁死', default:0},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 {id:'pos', label:'守備位置', type:'select', options:{'dh':'DH', '1b':'一塁', 'lf':'左翼', 'rf':'右翼', '3b':'三塁', '2b':'二塁', 'cf':'中堅', 'ss':'遊撃', 'c':'捕手'}},
                 {id:'def', label:'守備評価', type:'select', options:{'0':'平均的 (0)', '5':'上手い (+5)', '10':'名手 (+10)', '15':'神 (+15)', '-5':'苦手 (-5)', '-10':'下手 (-10)'}}
@@ -1703,9 +1721,9 @@
         } else {
             fields = [
                 {id:'ip', label:'投球回'}, {id:'er', label:'自責点'}, {id:'r', label:'失点'},
-                {id:'h', label:'被安打'}, {id:'hr', label:'被本塁打'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'},
+                {id:'h', label:'被安打'}, {id:'hr', label:'被本塁打'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球', default:0},
                 {id:'so', label:'奪三振'}, 
-                {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}, {id:'pu', label:'内野フライ'},
+                {id:'gb', label:'ゴロ', default:0}, {id:'fb', label:'フライ', default:0}, {id:'pu', label:'内野フライ', default:0},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 {id:'role', label:'役割', type:'select', options:{'sp':'先発', 'rp':'救援'}}
             ];
