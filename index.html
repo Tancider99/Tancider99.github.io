@@ -510,6 +510,13 @@
             <input type="text" class="search-input" id="searchInput" placeholder="指標名、意味、計算式で検索..." oninput="handleSearch()">
             <button class="theme-toggle" onclick="toggleTheme()" title="Dark Mode">🌙</button>
         </div>
+        
+        <!-- Batch Calc Buttons Added (Icons Removed) -->
+        <div style="display:flex; justify-content:center; gap:10px; margin-bottom:15px;">
+            <button class="preset-btn btn-save" onclick="openBatchCalc('bat')" style="font-size:0.9rem; padding:10px 20px;">野手一括計算</button>
+            <button class="preset-btn btn-del" onclick="openBatchCalc('pit')" style="font-size:0.9rem; padding:10px 20px; background:#f43f5e;">投手一括計算</button>
+        </div>
+
         <div class="filter-scroll">
             <div class="filter-chip active" onclick="filterCategory('all')" data-cat="all">ALL</div>
             <div class="filter-chip" onclick="filterCategory('std')" data-cat="std">基本</div>
@@ -583,30 +590,8 @@
         const lg_sf = d.lg_sf !== undefined ? d.lg_sf : DEFAULTS.LG_SF;
         const lg_sh = d.lg_sh !== undefined ? d.lg_sh : DEFAULTS.LG_SH;
 
-        const isDefault = (
-            parseFloat(d.lg_pa) === DEFAULTS.LG_PA &&
-            parseFloat(d.lg_runs) === DEFAULTS.LG_RUNS &&
-            parseFloat(d.lg_hits) === DEFAULTS.LG_HITS &&
-            parseFloat(d.lg_2b) === DEFAULTS.LG_2B &&
-            parseFloat(d.lg_3b) === DEFAULTS.LG_3B &&
-            parseFloat(lg_bb) === DEFAULTS.LG_BB &&
-            parseFloat(lg_ab) === DEFAULTS.LG_AB &&
-            parseFloat(lg_hbp) === DEFAULTS.LG_HBP &&
-            parseFloat(lg_sf) === DEFAULTS.LG_SF &&
-            parseFloat(lg_sh) === DEFAULTS.LG_SH
-        );
-
-        if (isDefault) {
-            return {
-                lg_r_pa: 0.092,
-                rpw: 8.5,
-                rep_per_pa: 15.5 / 600, 
-                lg_woba: 0.304,
-                woba_scale: 1.28,
-                lg_tra: 3.30,
-                fitting_ratio: 1.0
-            };
-        }
+        // 固定値を返す判定ロジック (isDefault) を削除しました。
+        // すべて入力値に基づき動的に計算されます。
 
         // --- リーグ詳細データの計算 ---
         const lg_ibb = lg_bb * 0.03; 
@@ -646,8 +631,8 @@
         const rpw = 20 * (d.lg_runs / est_lg_ip);
         const rep_per_pa = 0.12 * (lg_woba / woba_scale);
         
-        let lg_tra = (d.lg_runs / est_lg_ip) * 9 * 0.92;
-        if (isDefault) lg_tra = 3.30;
+        // tRAの計算 (固定値を使用せず計算)
+        const lg_tra = (d.lg_runs / est_lg_ip) * 9 * 0.92;
 
         return { lg_r_pa, rpw, rep_per_pa, lg_woba, lg_tra, woba_scale, fitting_ratio };
     }
@@ -757,7 +742,7 @@
             inputs: [
                 {id:'pa', label:'打席数'}, {id:'ab', label:'打数'},
                 {id:'h', label:'安打'}, {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, 
-                {id:'bb', label:'四球'}, {id:'hbp', label:'死球'}, 
+                {id:'bb', label:'四球'}, {id:'hbp', label:'死球}, 
                 {id:'sf', label:'犠飛'}, {id:'sh', label:'犠打'},
 
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
@@ -1694,6 +1679,226 @@
 
     function closeModalOutside(e) {
         if (e.target === modal) closeModal();
+    }
+
+    /* --- Batch Calculator Logic --- */
+    function openBatchCalc(mode) {
+        const isBat = mode === 'bat';
+        const title = isBat ? "野手指標 一括計算 (Batch Batter)" : "投手指標 一括計算 (Batch Pitcher)";
+        const catColor = isBat ? getCatColor('bat') : getCatColor('pit');
+        
+        // Define input fields for batch mode
+        let fields = [];
+        if (isBat) {
+            fields = [
+                {id:'pa', label:'打席数'}, {id:'ab', label:'打数'},
+                {id:'h', label:'安打'}, {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'},
+                {id:'bb', label:'四球'}, {id:'hbp', label:'死球', default:0}, {id:'so', label:'三振', default:0},
+                {id:'sf', label:'犠飛', default:0}, {id:'sh', label:'犠打', default:0},
+                {id:'sb', label:'盗塁', default:0}, {id:'cs', label:'盗塁死', default:0},
+                {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
+                {id:'pos', label:'守備位置', type:'select', options:{'dh':'DH', '1b':'一塁', 'lf':'左翼', 'rf':'右翼', '3b':'三塁', '2b':'二塁', 'cf':'中堅', 'ss':'遊撃', 'c':'捕手'}},
+                {id:'def', label:'守備評価', type:'select', options:{'0':'平均的 (0)', '5':'上手い (+5)', '10':'名手 (+10)', '15':'神 (+15)', '-5':'苦手 (-5)', '-10':'下手 (-10)'}}
+            ];
+        } else {
+            fields = [
+                {id:'ip', label:'投球回'}, {id:'er', label:'自責点'}, {id:'r', label:'失点'},
+                {id:'h', label:'被安打'}, {id:'hr', label:'被本塁打'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球', default:0},
+                {id:'so', label:'奪三振'}, 
+                {id:'gb', label:'ゴロ', default:0}, {id:'fb', label:'フライ', default:0}, {id:'pu', label:'内野フライ', default:0},
+                {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
+                {id:'role', label:'役割', type:'select', options:{'sp':'先発', 'rp':'救援'}}
+            ];
+        }
+
+        // Generate HTML
+        const inputsHtml = fields.map(inp => createInputHtml(inp)).join('');
+        
+        // Generate Advanced Settings (Shared)
+        // Using the same structure as individual calculators for League constants
+        // For simplicity, we'll just inject a hidden container that holds default league values or use global defaults in calculation
+        // To allow editing, we can reuse the advanced inputs html generation but it's getting large.
+        // Let's just add the most critical League Stats for context.
+        const advFields = isBat ? 
+            ['lg_pa', 'lg_ab', 'lg_runs', 'lg_hits', 'lg_bb', 'lg_hbp', 'lg_sf'] : 
+            ['lg_pa', 'lg_runs', 'lg_hits', 'lg_bb']; // Pitching simplified context
+            
+        // Find definitions for these advanced fields from existing terms (e.g., from WAR)
+        const warTerm = terms.find(t => t.id === (isBat ? 'war' : 'pit_war'));
+        const advInputsHtml = warTerm.inputs.filter(i => i.advanced).map(inp => createInputHtml(inp)).join('');
+
+        const html = `
+            <div class="section-label">INPUT DATA / データ入力</div>
+            <div class="calc-container" style="border-color:${catColor}">
+                
+                <!-- Preset Controls (Added to Batch Mode) -->
+                <div class="preset-bar">
+                    <div class="preset-label">💾 成績プリセット (自動入力)</div>
+                    <select class="preset-select" id="preset-select">
+                        <option value="">保存データを選択...</option>
+                    </select>
+                    <button type="button" class="preset-btn btn-load" onclick="loadPreset()">読込</button>
+                    <button type="button" class="preset-btn btn-del" onclick="removePreset()" title="削除">🗑️</button>
+                    <div style="flex-basis: 100%; height: 0; margin: 0;"></div> <!-- Line break for visual -->
+                    <input type="text" class="preset-input" id="preset-name" placeholder="新規保存名 (例: 2024山田)">
+                    <button type="button" class="preset-btn btn-save" onclick="savePreset()">保存</button>
+                </div>
+
+                <div class="calc-inputs">
+                    ${inputsHtml}
+                    <details class="advanced-details">
+                        <summary class="advanced-summary">詳細設定 (リーグ平均値など)</summary>
+                        <div class="advanced-content">
+                            ${advInputsHtml}
+                        </div>
+                    </details>
+                </div>
+                <button class="calc-btn" style="background:${catColor}" onclick="runBatchCalc('${mode}')">
+                    一括計算実行 (CALCULATE ALL)
+                </button>
+            </div>
+            <div id="batch-results-area" style="margin-top:30px;"></div>
+        `;
+
+        modalTitleArea.innerHTML = `
+            <div class="m-cat" style="color:${catColor}">BATCH CALCULATOR</div>
+            <h2 class="m-title">${title}</h2>
+        `;
+        modalBodyContent.innerHTML = html;
+        
+        modal.style.display = 'flex';
+        requestAnimationFrame(() => {
+            modal.classList.add('show');
+        });
+        
+        // Initialize Preset List for Batch Mode
+        updatePresetList();
+    }
+
+    function runBatchCalc(mode) {
+        const isBat = mode === 'bat';
+        const data = {};
+        
+        // Collect all inputs
+        const inputs = document.querySelectorAll('.calc-field, .calc-select');
+        inputs.forEach(el => {
+            const id = el.id.replace('calc-', '');
+            if(el.tagName === 'SELECT') {
+                data[id] = el.value;
+            } else {
+                data[id] = parseFloat(el.value) || 0;
+            }
+        });
+
+        // Calculate Indicators
+        let results = [];
+        
+        terms.forEach(term => {
+            // Check if this term belongs to the current mode (category check)
+            // bat/std/fld/tot for Batters
+            // pit/std/tot for Pitchers
+            let isRelevant = false;
+            if (isBat) {
+                if (['bat', 'std', 'fld', 'tot'].includes(term.category)) isRelevant = true;
+                // Exclude pitching specific terms even if in 'tot' or 'std' (like ERA)
+                if (term.id === 'era' || term.id === 'whip' || term.category === 'pit') isRelevant = false;
+                // Special case: WAR is relevant
+                if (term.id === 'pit_war') isRelevant = false;
+            } else {
+                if (['pit', 'std', 'tot'].includes(term.category)) isRelevant = true;
+                // Exclude batting specific
+                if (['bat', 'fld'].includes(term.category)) isRelevant = false;
+                if (term.id === 'war') isRelevant = false; // Exclude Batter WAR
+                // Include basics like ERA, WHIP
+            }
+
+            if (isRelevant && term.calc) {
+                try {
+                    // Check if we have necessary inputs? 
+                    // term.calc will run with 0s if missing, which is acceptable for batch
+                    // However, we should try to avoid NaN results
+                    const res = term.calc(data);
+                    if (res !== "---" && res !== "NaN" && res !== "Infinity") {
+                        results.push({
+                            title: term.title,
+                            full: term.full,
+                            value: res,
+                            criteria: term.criteria,
+                            cat: term.category
+                        });
+                    }
+                } catch(e) {
+                    // skip errors
+                }
+            }
+        });
+
+        // Render Table
+        if (results.length === 0) {
+            document.getElementById('batch-results-area').innerHTML = '<div class="no-result">計算可能な指標がありませんでした。</div>';
+            return;
+        }
+
+        let tableHtml = `
+            <div class="section-label">CALCULATION RESULTS / 結果一覧</div>
+            <table class="criteria-table">
+                <thead>
+                    <tr style="background:var(--c-bg);">
+                        <th style="padding-left:10px;">指標 (METRIC)</th>
+                        <th style="text-align:right; padding-right:20px;">値 (VALUE)</th>
+                        <th>基準 (CRITERIA)</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        results.forEach(r => {
+            const catColor = getCatColor(r.cat);
+            tableHtml += `
+                <tr>
+                    <td style="padding-left:10px;">
+                        <span style="color:${catColor}; font-weight:900;">${r.title}</span>
+                        <div style="font-size:0.75rem; color:var(--c-text-secondary);">${r.full}</div>
+                    </td>
+                    <td style="text-align:right; padding-right:20px; font-family:var(--font-mono); font-size:1.5rem; font-weight:700; color:var(--c-text-primary);">
+                        ${r.value}
+                    </td>
+                    <td style="font-size:0.85rem; color:var(--c-text-secondary);">
+                        ${r.criteria || '-'}
+                    </td>
+                </tr>
+            `;
+        });
+
+        tableHtml += `</tbody></table>`;
+        
+        // Add Copy Button
+        tableHtml += `
+            <button class="calc-btn" style="margin-top:20px; background:var(--c-text-secondary);" onclick="copyBatchResults()">
+                📋 結果をコピー (COPY TEXT)
+            </button>
+        `;
+
+        const resArea = document.getElementById('batch-results-area');
+        resArea.innerHTML = tableHtml;
+        resArea.scrollIntoView({behavior: 'smooth'});
+    }
+
+    function copyBatchResults() {
+        const rows = document.querySelectorAll('#batch-results-area tr');
+        let text = "【SABR METRICS LAB Calculation Results】\n";
+        rows.forEach((row, i) => {
+            if(i===0) return; // skip header
+            const cols = row.querySelectorAll('td');
+            if(cols.length > 0) {
+                const metric = cols[0].querySelector('span').innerText;
+                const value = cols[1].innerText.trim();
+                text += `${metric}: ${value}\n`;
+            }
+        });
+        navigator.clipboard.writeText(text).then(() => {
+            alert("クリップボードにコピーしました！");
+        });
     }
 
     /* --- Preset Logic (LocalStorage) --- */
