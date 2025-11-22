@@ -1933,8 +1933,12 @@
             '四球': 'bb', '死球': 'hbp', '三振': 'so', '犠飛': 'sf', '犠打': 'sh', '盗塁': 'sb', '盗塁死': 'cs', '併殺': 'gidp'
         };
         const mapPit = {
-            '回': 'ip', '投球回': 'ip', 'IP': 'ip', '失点': 'r', '自責': 'er', '被安打': 'h', '被本塁打': 'hr', '被本': 'hr',
-            '与四球': 'bb', '四球': 'bb', '与死球': 'hbp', '死球': 'hbp', '奪三振': 'so', '三振': 'so', '打者': 'bf'
+            // 修正: WHIPの"IP"に反応しないように (?<!WH) を追加
+            '回': 'ip', '投球回': 'ip', '(?<!WH)IP': 'ip', 
+            '失点': 'r', '自責': 'er', '被安打': 'h', '被本塁打': 'hr', '被本': 'hr',
+            // 修正: 無四球の"四球"に反応しないように (?<!無) を追加
+            '与四球': 'bb', '(?<!無)四球': 'bb', 
+            '与死球': 'hbp', '死球': 'hbp', '奪三振': 'so', '三振': 'so', '打者': 'bf'
         };
 
         const map = mode === 'bat' ? mapBat : mapPit;
@@ -1953,7 +1957,7 @@
                     el.style.backgroundColor = "#dcfce7"; // Success Color
                     setTimeout(()=>el.style.backgroundColor="", 2000);
                     count++;
-                    if(extractedInfo.length < 6) extractedInfo.push(key);
+                    if(extractedInfo.length < 6) extractedInfo.push(key.replace(/[\(\)\?\<\!WH無]/g, '')); // 表示用に正規表現記号を除去
                 }
             }
         }
