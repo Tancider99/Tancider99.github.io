@@ -623,7 +623,7 @@
         const lg_sf = d.lg_sf || DEFAULTS.LG_SF;
         const lg_sh = d.lg_sh || DEFAULTS.LG_SH;
         
-        // その他のリーグ統計も同様に安全策をとる
+        // その他のリーグ統計
         const lg_pa = d.lg_pa || DEFAULTS.LG_PA;
         const lg_runs = d.lg_runs || DEFAULTS.LG_RUNS;
         const lg_hits = d.lg_hits || DEFAULTS.LG_HITS;
@@ -644,7 +644,7 @@
         const lg_batted = lg_pa - lg_bb - lg_hbp - lg_so;
         
         // 推定: リーグ外野フライ数 (ユーザー指定: FB% 45%, GB% 45%, LD% 10%)
-        const lg_fb = lg_batted * 0.45;
+        const lg_fb_est = lg_batted * 0.45;
 
         // --- wOBA計算 (基準係数: wOBA Scale=1.28想定) ---
         const woba_denom = lg_ab + lg_bb - lg_ibb + lg_hbp + lg_sf;
@@ -678,7 +678,7 @@
         // --- xFIP定数 & 比率の計算 ---
         
         // 比率 = 本塁打 ÷ 外野フライ
-        const lg_xfip_ratio = lg_hr / lg_fb;
+        const lg_xfip_ratio = lg_hr / lg_fb_est;
         
         // リーグ失点率 (RA9)
         const lg_ra9 = (lg_runs / est_lg_ip) * 9;
@@ -687,12 +687,53 @@
         const lg_era_est = lg_ra9 * 0.92;
         
         // xFIPのリーグ成分
-        const lg_xfip_component = (13 * lg_xfip_ratio * lg_fb + 3 * (lg_bb - lg_ibb + lg_hbp) - 2 * lg_so) / est_lg_ip;
+        const lg_xfip_component = (13 * lg_xfip_ratio * lg_fb_est + 3 * (lg_bb - lg_ibb + lg_hbp) - 2 * lg_so) / est_lg_ip;
         
         // 定数 = リーグ防御率 - リーグxFIP成分
         const xfip_constant = lg_era_est - lg_xfip_component;
 
-        return { lg_r_pa, rpw, rep_per_pa, lg_woba, lg_tra, woba_scale, fitting_ratio, xfip_constant, lg_xfip_ratio };
+        // --- tRA定数の計算 (新規追加) ---
+        // リーグ打球内訳の推定
+        // インプレー打球 (BIP) = PA - BB - HBP - SO - HR
+        let lg_bip = lg_pa - lg_bb - lg_hbp - lg_so - lg_hr;
+        if (lg_bip < 0) lg_bip = 0;
+
+        // 平均的な分布率 (GB:45%, LD:21%, FB系:34%)
+        const lg_gb = lg_bip * 0.45;
+        const lg_ld = lg_bip * 0.21;
+        const lg_fb_system = lg_bip * 0.34;
+        const lg_pu = lg_fb_system * 0.10; // 内野フライ (FB系の10%)
+        const lg_fb = lg_fb_system - lg_pu; // 純粋な外野フライ
+
+        // リーグtRA成分 (定数なしのtRA)
+        const lg_tra_num = 
+            0.297 * lg_bb + 
+            0.327 * lg_hbp - 
+            0.108 * lg_so + 
+            1.401 * lg_hr + 
+            0.036 * lg_gb - 
+            0.124 * lg_pu + 
+            0.132 * lg_fb + 
+            0.289 * lg_ld;
+
+        const lg_tra_denom = 
+            lg_so + 
+            0.745 * lg_gb + 
+            0.304 * lg_ld + 
+            0.994 * lg_pu + 
+            0.675 * lg_fb;
+        
+        let tra_constant = 0;
+        if (lg_tra_denom > 0) {
+            const lg_tra_raw = (lg_tra_num / lg_tra_denom) * 27;
+            // 定数 = リーグ失点率(RA9) - リーグtRA
+            tra_constant = lg_ra9 - lg_tra_raw;
+        }
+
+        return { 
+            lg_r_pa, rpw, rep_per_pa, lg_woba, lg_tra, woba_scale, fitting_ratio, 
+            xfip_constant, lg_xfip_ratio, tra_constant 
+        };
     }
 
     // --- 新規追加: 打球内訳の推定ロジック ---
@@ -711,10 +752,13 @@
         const so = d.so || (d.ip * 0.8); // 仮置き
         const bb = d.bb || (d.ip * 0.3);
         const hbp = d.hbp || 0;
+        const hr = d.hr || 0; // 被本塁打
 
-        // 3. 打球数 (Batted Balls) = BF - SO - BB - HBP
-        let batted = bf - so - bb - hbp;
-        if (batted < 0) batted = 0;
+        // 3. インプレー打球数 (BIP) の推定
+        // 修正: 総打球数から本塁打(HR)を除外する
+        // BIP = 打者 - 三振 - 四球 - 死球 - 本塁打
+        let bip = bf - so - bb - hbp - hr;
+        if (bip < 0) bip = 0;
 
         // 4. ゴロ率 (GB%) の取得
         // セレクトボックスの値(文字列)を数値化。デフォルトは平均の45%
@@ -734,12 +778,12 @@
         // フライ全体のうち約10%が内野フライと仮定
         const iffb_rate = 0.10; 
 
-        // 実数計算
-        const gb = batted * gb_rate;
-        const ld = batted * ld_rate;
-        const fb_total = batted * fb_system_rate;
+        // 実数計算 (BIPをベースに分配)
+        const gb = bip * gb_rate;
+        const ld = bip * ld_rate;
+        const fb_total = bip * fb_system_rate;
         const pu = fb_total * iffb_rate;     // 内野フライ
-        const fb = fb_total - pu;            // 純粋な外野フライ
+        const fb = fb_total - pu;            // 純粋な外野フライ (HRは含まない)
 
         // データオブジェクトに注入
         d.gb = gb;
@@ -1310,12 +1354,13 @@
             id: "siera", category: "pit", title: "SIERA", full: "Skill-Interactive Earned Run Average",
             short: "打球の質や三振・四球を考慮した、FIPより精度の高い将来予測指標。",
             desc: "投球の「質」を最も正確に反映するとされる指標。ゴロ率や三振、四球のバランスから算出されます。<br>※選択された打球傾向から打球内訳（ゴロ・フライ等）を自動推定して計算します。",
-            formula: `6.145 - 16.99(SO/PA) + 11.43(BB/PA) - 1.86((GB-FB-PU)/PA) + ...`,
+            // formula: `6.145 - 16.99(SO/PA) + 11.43(BB/PA) - 1.86((GB-FB-PU)/PA) + ...`,
+            formula: `6.145 - 16.99(SO/PA) + 11.43(BB/PA) - 1.86((GB-FB-PU)/PA) + 7.65((SO/PA)²) - 6.66(((GB-FB-PU)/PA)²) + 10.13(SO/PA)((GB-FB-PU)/PA) - 5.20(BB/PA)((GB-FB-PU)/PA)`,
             criteria: "防御率スケール (3.00: 優秀)",
             related: ["fip", "xfip", "tra"],
             aiMode: true,
             inputs: [
-                {id:'ip', label:'投球回'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, 
+                {id:'ip', label:'投球回'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, {id:'hr', label:'被本塁打', advanced:true}, 
                 // 変更: 実数入力廃止 -> 傾向選択へ
                 {id:'gb_type', label:'打球傾向(GB%)', type:'select', options:{
                     '55':'55% (超ゴロP)', 
@@ -1334,13 +1379,23 @@
                 // ゼロ除算防止
                 if (!pa || pa === 0) return "---";
 
-                // SIERA計算 (FanGraphs Formula)
-                // d.gb, d.fb, d.pu は推定済み
+                // SIERA計算 (Updated Formula)
+                // SIERA = 6.145 – 16.986*(SO/PA) + 11.434*(BB/PA) – 1.858*((GB-FB-PU)/PA) 
+                //       + 7.653*((SO/PA)^2) - 6.664*(((GB-FB-PU)/PA)^2)  <-- Minus per standard FanGraphs
+                //       + 10.130*(SO/PA)*((GB-FB-PU)/PA) – 5.195*(BB/PA)*((GB-FB-PU)/PA)
+                
                 const A = d.so / pa;
                 const B = d.bb / pa;
-                const C = (d.gb - d.fb - d.pu) / pa;
+                const C_val = (d.gb - d.fb - d.pu) / pa;
                 
-                const val = 6.145 - 16.986*A + 11.434*B - 1.858*C + 7.653*Math.pow(A,2) + 6.664*Math.pow(C,2) + 10.130*A*C - 5.195*B*C;
+                const val = 6.145 
+                    - 16.986 * A 
+                    + 11.434 * B 
+                    - 1.858 * C_val 
+                    + 7.653 * (A * A) 
+                    - 6.664 * (C_val * C_val) 
+                    + 10.130 * A * C_val 
+                    - 5.195 * B * C_val;
                 
                 return isFinite(val) ? val.toFixed(2) : "---";
             }
@@ -1349,7 +1404,7 @@
             id: "tra", category: "pit", title: "tRA", full: "True Runs Allowed",
             short: "打球の種類（ゴロ・フライ）も考慮した究極の指標。",
             desc: "FIPを発展させ、各打球種別（ライナー、ゴロ、フライ）の期待失点値を割り当てて算出する指標。<br>※打球傾向から打球数を推定して計算します。",
-            formula: `打球種別ごとの期待失点値の総和`,
+            formula: `( (0.297×BB + 0.327×HBP - 0.108×SO + 1.401×HR + 0.036×GB - 0.124×PU + 0.132×FB + 0.289×LD) ÷ (SO + 0.745×GB + 0.304×LD + 0.994×PU + 0.675×FB) × 27 ) + 定数`,
             criteria: "防御率スケール",
             related: ["fip"],
             aiMode: true,
@@ -1365,20 +1420,35 @@
             ],
             calc: (d) => {
                 estimateBattedBalls(d);
-                // 簡易tRA計算 (係数は近似値)
-                // SO: 0, BB: 0.3, HBP: 0.33, HR: 1.4
-                // GB: 0.05, FB: 0.15, LD: 0.3, PU: -0.1
-                const val = (
-                    0 * d.so + 
-                    0.3 * d.bb + 
-                    0.33 * d.hbp + 
-                    1.4 * d.hr +
-                    0.05 * d.gb +
-                    0.15 * d.fb +
-                    0.3 * d.ld +
-                    -0.1 * d.pu
-                ) / d.ip * 9; // Scale to RA9
-                return isFinite(val) ? (val * 0.92).toFixed(2) : "---"; // Convert RA9 to ERA scale
+                const C = calcDerived(d);
+                
+                // tRA計算 (Updated Formula)
+                const numerator = 
+                    0.297 * d.bb + 
+                    0.327 * d.hbp - 
+                    0.108 * d.so + 
+                    1.401 * d.hr + 
+                    0.036 * d.gb - 
+                    0.124 * d.pu + 
+                    0.132 * d.fb + 
+                    0.289 * d.ld;
+                    
+                const denominator = 
+                    d.so + 
+                    0.745 * d.gb + 
+                    0.304 * d.ld + 
+                    0.994 * d.pu + 
+                    0.675 * d.fb;
+                
+                if (denominator === 0) return "---";
+
+                // tRA Raw
+                const tra_raw = (numerator / denominator) * 27;
+                
+                // 定数加算 (xFIP定数を流用してERAスケールへ補正)
+                const val = tra_raw + C.xfip_constant;
+                
+                return isFinite(val) ? val.toFixed(2) : "---";
             }
         },
         {
@@ -2044,10 +2114,10 @@
         };
         const mapPit = {
             // 修正: WHIPの"IP"に反応しないように (?<!WH) を追加
-            '回': 'ip', '投球回': 'ip', '(?<!WH)IP': 'ip', 
+            '回': 'ip', '投球回': 'ip', 'IP': 'ip', 
             '失点': 'r', '自責': 'er', '被安打': 'h', '被本塁打': 'hr', '被本': 'hr',
             // 修正: 無四球の"四球"に反応しないように (?<!無) を追加
-            '与四球': 'bb', '(?<!無)四球': 'bb', 
+            '与四球': 'bb', '四球': 'bb', 
             '与死球': 'hbp', '死球': 'hbp', '奪三振': 'so', '三振': 'so', '打者': 'bf'
             // NOTE: 解析ロジックからも gb, fb 等の実数マッピングは除去済み（UIに存在しないため）
         };
@@ -2068,7 +2138,7 @@
                     el.style.backgroundColor = "#dcfce7"; // Success Color
                     setTimeout(()=>el.style.backgroundColor="", 2000);
                     count++;
-                    if(extractedInfo.length < 6) extractedInfo.push(key.replace(/[\(\)\?\<\!WH無]/g, '')); // 表示用に正規表現記号を除去
+                    if(extractedInfo.length < 6) extractedInfo.push(key);
                 }
             }
         }
