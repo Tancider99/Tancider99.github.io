@@ -638,12 +638,27 @@
         LG_3B: 120,
         LG_HR: 485, 
         LG_BB: 2300,
-        // 新規追加: リーグ総数詳細（OBP/SLGの代わり）
-        LG_AB: 28750, // 打数 (変更: 24900 -> 28750)
-        LG_HBP: 300,  // 死球 (変更: 200 -> 300)
-        LG_SF: 190,   // 犠飛 (変更: 230 -> 190)
-        LG_SH: 550    // 犠打 (変更: 700 -> 550)
+        // リーグ総数詳細
+        LG_AB: 28750, // 打数
+        LG_HBP: 300,  // 死球
+        LG_SF: 190,   // 犠飛
+        LG_SH: 550    // 犠打
     };
+    
+    // --- 統一された詳細設定の定義 (11項目) ---
+    const ADVANCED_LEAGUE_INPUTS = [
+        {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
+        {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
+        {id:'lg_ab', label:'リーグ総打数', type:'number', advanced:true, default: DEFAULTS.LG_AB}, 
+        {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
+        {id:'lg_2b', label:'リーグ総二塁打', type:'number', advanced:true, default: DEFAULTS.LG_2B},
+        {id:'lg_3b', label:'リーグ総三塁打', type:'number', advanced:true, default: DEFAULTS.LG_3B},
+        {id:'lg_hr', label:'リーグ総本塁打', type:'number', advanced:true, default: DEFAULTS.LG_HR},
+        {id:'lg_bb', label:'リーグ総四球', type:'number', advanced:true, default: DEFAULTS.LG_BB},
+        {id:'lg_hbp', label:'リーグ総死球', type:'number', advanced:true, default: DEFAULTS.LG_HBP},
+        {id:'lg_sf', label:'リーグ総犠飛', type:'number', advanced:true, default: DEFAULTS.LG_SF},
+        {id:'lg_sh', label:'リーグ総犠打', type:'number', advanced:true, default: DEFAULTS.LG_SH}
+    ];
 
     // Park Factors
     const PARK_FACTORS = {
@@ -782,7 +797,7 @@
 
         return { 
             lg_r_pa, rpw, rep_per_pa, lg_woba, lg_tra, woba_scale, fitting_ratio, 
-            xfip_constant, lg_xfip_ratio, tra_constant 
+            xfip_constant, lg_xfip_ratio, lg_fb_est, tra_constant, lg_ra9, lg_era_est
         };
     }
 
@@ -790,6 +805,9 @@
     function estimateBattedBalls(d) {
         // 既に実数がある場合は計算しない（再計算防止）
         if (d.est_done) return d;
+        
+        // リーグ総本塁打を使用
+        const lg_hr = d.lg_hr || DEFAULTS.LG_HR;
 
         // 1. 打者数(BF)の確保
         let bf = d.bf;
@@ -802,11 +820,10 @@
         const so = d.so || (d.ip * 0.8); // 仮置き
         const bb = d.bb || (d.ip * 0.3);
         const hbp = d.hbp || 0;
-        const hr = d.hr || 0; // 被本塁打
+        const hr = d.hr || 0; // 被本塁打 (SIERA, tRAの計算に必要)
 
         // 3. インプレー打球数 (BIP) の推定
-        // 修正: 総打球数から本塁打(HR)を除外する
-        // BIP = 打者 - 三振 - 四球 - 死球 - 本塁打
+        // BIP = 打者 - 三振 - 四球 - 死球 - 被本塁打
         let bip = bf - so - bb - hbp - hr;
         if (bip < 0) bip = 0;
 
@@ -841,6 +858,7 @@
         d.fb = fb;
         d.pu = pu;
         d.bf = bf; // 推定したBFも保存
+        d.hr = hr; // 被本塁打も計算用に注入
         d.est_done = true; // フラグ
 
         return d;
@@ -883,16 +901,8 @@
                 {id:'pos', label:'守備位置', type:'select', options:{'dh':'DH', '1b':'一塁', 'lf':'左翼', 'rf':'右翼', '3b':'三塁', '2b':'二塁', 'cf':'中堅', 'ss':'遊撃', 'c':'捕手'}},
                 {id:'def', label:'守備評価', type:'select', options:{'0':'平均的 (0)', '5':'上手い (+5)', '10':'名手 (+10)', '15':'神 (+15)', '-5':'苦手 (-5)', '-10':'下手 (-10)'}},
                 
-                {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
-                {id:'lg_ab', label:'リーグ総打数', type:'number', advanced:true, default: DEFAULTS.LG_AB}, 
-                {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
-                {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
-                {id:'lg_2b', label:'リーグ総二塁打', type:'number', advanced:true, default: DEFAULTS.LG_2B},
-                {id:'lg_3b', label:'リーグ総三塁打', type:'number', advanced:true, default: DEFAULTS.LG_3B},
-                {id:'lg_bb', label:'リーグ総四球', type:'number', advanced:true, default: DEFAULTS.LG_BB},
-                {id:'lg_hbp', label:'リーグ総死球', type:'number', advanced:true, default: DEFAULTS.LG_HBP},
-                {id:'lg_sf', label:'リーグ総犠飛', type:'number', advanced:true, default: DEFAULTS.LG_SF},
-                {id:'lg_sh', label:'リーグ総犠打', type:'number', advanced:true, default: DEFAULTS.LG_SH}
+                // --- 統一された詳細設定 ---
+                ...ADVANCED_LEAGUE_INPUTS
             ],
             calc: (d) => {
                 const C = calcDerived(d);
@@ -955,16 +965,9 @@
                 {id:'sf', label:'犠飛', default:0}, {id:'sh', label:'犠打', default:0},
 
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
-                {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
-                {id:'lg_ab', label:'リーグ総打数', type:'number', advanced:true, default: DEFAULTS.LG_AB}, 
-                {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
-                {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
-                {id:'lg_2b', label:'リーグ総二塁打', type:'number', advanced:true, default: DEFAULTS.LG_2B},
-                {id:'lg_3b', label:'リーグ総三塁打', type:'number', advanced:true, default: DEFAULTS.LG_3B},
-                {id:'lg_bb', label:'リーグ総四球', type:'number', advanced:true, default: DEFAULTS.LG_BB},
-                {id:'lg_hbp', label:'リーグ総死球', type:'number', advanced:true, default: DEFAULTS.LG_HBP},
-                {id:'lg_sf', label:'リーグ総犠飛', type:'number', advanced:true, default: DEFAULTS.LG_SF},
-                {id:'lg_sh', label:'リーグ総犠打', type:'number', advanced:true, default: DEFAULTS.LG_SH}
+                
+                // --- 統一された詳細設定 ---
+                ...ADVANCED_LEAGUE_INPUTS
             ],
             calc: (d) => {
                 const C = calcDerived(d);
@@ -1011,32 +1014,23 @@
                 {id:'role', label:'役割', type:'select', options:{'sp':'先発', 'rp':'救援'}},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 
-                // 詳細設定を野手WARと統一
-                {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
-                {id:'lg_ab', label:'リーグ総打数', type:'number', advanced:true, default: DEFAULTS.LG_AB}, 
-                {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
-                {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
-                {id:'lg_2b', label:'リーグ総二塁打', type:'number', advanced:true, default: DEFAULTS.LG_2B},
-                {id:'lg_3b', label:'リーグ総三塁打', type:'number', advanced:true, default: DEFAULTS.LG_3B},
-                {id:'lg_bb', label:'リーグ総四球', type:'number', advanced:true, default: DEFAULTS.LG_BB},
-                {id:'lg_hbp', label:'リーグ総死球', type:'number', advanced:true, default: DEFAULTS.LG_HBP},
-                {id:'lg_sf', label:'リーグ総犠飛', type:'number', advanced:true, default: DEFAULTS.LG_SF},
-                {id:'lg_sh', label:'リーグ総犠打', type:'number', advanced:true, default: DEFAULTS.LG_SH}
+                // --- 統一された詳細設定 ---
+                ...ADVANCED_LEAGUE_INPUTS
             ],
             calc: (d) => {
                 const C = calcDerived(d);
 
                 // 1. FIP Calculation (Standard Constant approx 3.10)
-                const fip = (13 * d.hr + 3 * d.bb - 2 * d.so) / d.ip + 3.10;
+                const fip = (13 * d.hr + 3 * d.bb - 2 * d.so) / d.ip + 3.10; // Simple FIP constant is approx 3.10
 
                 // 2. League Parameters
-                const est_lg_ip = d.lg_pa / 4.25;
-                const lg_r_9 = (d.lg_runs / est_lg_ip) * 9;
+                // C.lg_ra9 is calculated inside calcDerived using the new comprehensive inputs
+                const lg_ra9 = C.lg_ra9;
 
                 // 3. Park Adjustment
                 const pf = PARK_FACTORS[d.stadium].pf;
                 // Park Adjusted League RA9
-                const lg_ra9_park = lg_r_9 * pf;
+                const lg_ra9_park = lg_ra9 * pf;
 
                 // 4. Runs Above Average (RAA) based on FIP
                 // RAA = (League RA - Pitcher FIP) * IP / 9
@@ -1060,7 +1054,16 @@
             desc: "「1勝の重み」を得点換算したもの。デフォルトでは8.5に設定されている",
             formula: `20 × (リーグ総得点 ÷ リーグ総投球回)`,
             criteria: "8.5 ～ 10.0",
-            related: ["war", "pythag"]
+            related: ["war", "pythag"],
+            inputs: [
+                {id:'lg_runs', label:'リーグ総得点'},
+                {id:'lg_pa', label:'リーグ総打席'}
+                // IPはPAから推定されるため、ここではPAを使用
+            ],
+            calc: (d) => {
+                const est_lg_ip = d.lg_pa / 4.25; // Estimate IP from PA
+                return (20 * (d.lg_runs / est_lg_ip)).toFixed(2);
+            }
         },
         {
             id: "wpa", category: "tot", title: "WPA", full: "Win Probability Added",
@@ -1160,17 +1163,8 @@
                 {id:'bb', label:'四球'}, {id:'hbp', label:'死球', default:0}, 
                 {id:'sf', label:'犠飛', default:0}, {id:'sh', label:'犠打', default:0},
 
-                // 詳細入力へ変更
-                {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
-                {id:'lg_ab', label:'リーグ総打数', type:'number', advanced:true, default: DEFAULTS.LG_AB}, 
-                {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
-                {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
-                {id:'lg_2b', label:'リーグ総二塁打', type:'number', advanced:true, default: DEFAULTS.LG_2B},
-                {id:'lg_3b', label:'リーグ総三塁打', type:'number', advanced:true, default: DEFAULTS.LG_3B},
-                {id:'lg_bb', label:'リーグ総四球', type:'number', advanced:true, default: DEFAULTS.LG_BB},
-                {id:'lg_hbp', label:'リーグ総死球', type:'number', advanced:true, default: DEFAULTS.LG_HBP},
-                {id:'lg_sf', label:'リーグ総犠飛', type:'number', advanced:true, default: DEFAULTS.LG_SF},
-                {id:'lg_sh', label:'リーグ総犠打', type:'number', advanced:true, default: DEFAULTS.LG_SH}
+                // --- 統一された詳細設定 ---
+                ...ADVANCED_LEAGUE_INPUTS
             ],
             calc: (d) => {
                 const C = calcDerived(d);
@@ -1376,12 +1370,8 @@
                     '40':'40% (フライP)', 
                     '35':'35% (超フライP)'
                 }},
-                // 詳細入力
-                {id:'lg_hr', label:'リーグ総HR', type:'number', advanced:true, default: DEFAULTS.LG_HR},
-                {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
-                {id:'lg_bb', label:'リーグ総四球', type:'number', advanced:true, default: DEFAULTS.LG_BB},
-                {id:'lg_hbp', label:'リーグ総死球', type:'number', advanced:true, default: DEFAULTS.LG_HBP},
-                {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS}
+                // --- 統一された詳細設定 ---
+                ...ADVANCED_LEAGUE_INPUTS
             ],
             calc: (d) => {
                 // 打球内訳を推定
@@ -1395,9 +1385,10 @@
                 const term2 = 3 * (d.bb - est_ibb + d.hbp);
                 const term3 = 2 * d.so;
                 
+                // xFIP = (13 * lg_xfip_ratio * FB + 3 * (BB - IBB + HBP) - 2 * SO) / IP + xfip_constant
                 const val = (term1 + term2 - term3) / d.ip + C.xfip_constant;
                 
-                return val.toFixed(2);
+                return isFinite(val) ? val.toFixed(2) : "---";
             }
         },
         {
@@ -1411,7 +1402,7 @@
             aiMode: true,
             inputs: [
                 {id:'ip', label:'投球回'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, 
-                {id:'hr', label:'被本塁打'}, // 必須項目に変更 (advanced:trueを削除)
+                {id:'hr', label:'被本塁打'}, // 必須項目に変更
                 // 変更: 実数入力廃止 -> 傾向選択へ
                 {id:'gb_type', label:'打球傾向(GB%)', type:'select', options:{
                     '55':'55% (超ゴロP)', 
@@ -1420,7 +1411,7 @@
                     '40':'40% (フライP)', 
                     '35':'35% (超フライP)'
                 }},
-                {id:'bf', label:'打者数'} // 必須項目に変更 (advanced:trueを削除)
+                {id:'bf', label:'打者数'} // 必須項目に変更
             ],
             calc: (d) => {
                 // 打球内訳を推定
@@ -1432,7 +1423,7 @@
 
                 // SIERA計算 (Updated Formula)
                 // SIERA = 6.145 – 16.986*(SO/PA) + 11.434*(BB/PA) – 1.858*((GB-FB-PU)/PA) 
-                //       + 7.653*((SO/PA)^2) - 6.664*(((GB-FB-PU)/PA)^2)  <-- Minus per standard FanGraphs
+                //       + 7.653*((SO/PA)^2) - 6.664*(((GB-FB-PU)/PA)^2)
                 //       + 10.130*(SO/PA)*((GB-FB-PU)/PA) – 5.195*(BB/PA)*((GB-FB-PU)/PA)
                 
                 const A = d.so / pa;
@@ -1468,12 +1459,8 @@
                     '40':'40% (フライP)', 
                     '35':'35% (超フライP)'
                 }},
-                // 詳細入力
-                {id:'lg_hr', label:'リーグ総HR', type:'number', advanced:true, default: DEFAULTS.LG_HR},
-                {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
-                {id:'lg_bb', label:'リーグ総四球', type:'number', advanced:true, default: DEFAULTS.LG_BB},
-                {id:'lg_hbp', label:'リーグ総死球', type:'number', advanced:true, default: DEFAULTS.LG_HBP},
-                {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS}
+                // --- 統一された詳細設定 ---
+                ...ADVANCED_LEAGUE_INPUTS
             ],
             calc: (d) => {
                 estimateBattedBalls(d);
@@ -1505,10 +1492,6 @@
                 // 定数加算 (リーグRA9に合わせる補正)
                 const val = tra_raw + C.tra_constant;
                 
-                // 通常tRAは失点率スケールだが、防御率スケールで表示したい場合は0.92を掛ける
-                // ユーザー定義の定数式がRA9スケールに合わせるものなので、
-                // 最終的に防御率感覚で評価したいならここで変換する。
-                // ここではユーザー定義に従い、定数加算後の値をそのまま返す (RA9スケール)
                 return isFinite(val) ? val.toFixed(2) : "---";
             }
         },
@@ -1554,15 +1537,6 @@
             criteria: "2.5: 平均 / 4.0: 非常に優秀",
             inputs: [{id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}],
             calc: (d) => (d.so / d.bb).toFixed(2)
-        },
-        {
-            id: "noi", category: "bat", title: "NOI", full: "New Offensive Index",
-            short: "出塁率＋長打率÷3",
-            desc: "OPSの簡易修正版。出塁率の価値を長打率の3倍と見積もって計算する。日本独自の指標",
-            formula: `(${formatVar('出塁率')} + ${formatVar('長打率')} ÷ 3) × 1000`,
-            criteria: "450: 平均 / 550: 優秀",
-            inputs: [{id:'obp', label:'出塁率'}, {id:'slg', label:'長打率'}],
-            calc: (d) => ((d.obp + d.slg / 3) * 1000).toFixed(0)
         },
         {
             id: "gb_pct", category: "pit", title: "GB%", full: "Ground Ball Percentage (Est)",
@@ -1673,7 +1647,7 @@
         {
             id: "p_ip", category: "pit", title: "P/IP", full: "Pitches per Inning",
             short: "1イニングあたりの投球数",
-            formula: `${formatVar('投球数')} ÷ ${formatVar('投球回')}`,
+            formula: `${formatVar('投球数')} × 9 ÷ ${formatVar('投球回')}`,
             criteria: "15球以下: 省エネ",
             inputs: [{id:'np', label:'球数'}, {id:'ip', label:'投球回'}],
             calc: (d) => d.np > 0 ? (d.np / d.ip).toFixed(1) : "---"
@@ -1684,19 +1658,20 @@
             desc: "防御率と投球回を基に算出する積み上げ系指標。WARの投球版の簡易計算に使われることがある",
             formula: `(リーグ平均防御率 - ${formatVar('防御率')}) × ${formatVar('投球回')} ÷ 9`,
             criteria: "プラスなら平均以上",
-            inputs: [{id:'lg_era', label:'L平均防御率'}, {id:'era', label:'防御率'}, {id:'ip', label:'投球回'}],
+            inputs: [
+                {id:'er', label:'自責点'}, 
+                {id:'ip', label:'投球回'},
+                // リーグ平均防御率の代わりに、詳細設定から推定できるようにする
+                ...ADVANCED_LEAGUE_INPUTS
+            ],
             calc: (d) => {
-                // リーグ平均防御率がない場合は詳細設定から推定
-                let lg_era = d.lg_era;
-                if (!lg_era) {
-                    // LgRA9 = LgRuns / (LgPA / 4.25) * 9
-                    // LgERA ≈ LgRA9 * 0.92
-                    const est_lg_ip = d.lg_pa / 4.25;
-                    const lg_ra9 = (d.lg_runs / est_lg_ip) * 9;
-                    lg_era = lg_ra9 * 0.92;
-                }
-                // 自チーム防御率
-                const my_era = d.era ? d.era : (d.er * 9 / d.ip);
+                // ERAを計算 (入力がない場合は自責点から計算)
+                const my_era = d.er ? (d.er * 9 / d.ip) : 0;
+                
+                // リーグ平均防御率を詳細設定から推定
+                const C = calcDerived(d);
+                const lg_era = C.lg_era_est;
+                
                 return ((lg_era - my_era) * d.ip / 9).toFixed(1);
             }
         }
@@ -2109,9 +2084,8 @@
         // Generate HTML
         const inputsHtml = fields.map(inp => createInputHtml(inp)).join('');
         
-        // Generate Advanced Settings (Shared)
-        const warTerm = terms.find(t => t.id === (isBat ? 'war' : 'pit_war'));
-        const advInputsHtml = warTerm.inputs.filter(i => i.advanced).map(inp => createInputHtml(inp)).join('');
+        // Generate Advanced Settings (Unified)
+        const advInputsHtml = ADVANCED_LEAGUE_INPUTS.map(inp => createInputHtml(inp)).join('');
 
         // Smart Parser HTML (Text Only AI)
         const parserHtml = `
@@ -2194,7 +2168,9 @@
         const text = textInput.value.trim();
 
         if (!text) {
-            alert("テキストを入力してください");
+            // alert("テキストを入力してください"); // 警告をカスタムメッセージに変更
+            msg.style.display = 'block';
+            msg.innerHTML = `<div style="color:#ef4444;">❌ テキストを入力してください。</div>`;
             return;
         }
 
@@ -2229,7 +2205,6 @@
             // 修正: 無四球の"四球"に反応しないように (?<!無) を追加
             '与四球': 'bb', '四球': 'bb', 
             '与死球': 'hbp', '死球': 'hbp', '奪三振': 'so', '三振': 'so', '打者': 'bf'
-            // NOTE: 解析ロジックからも gb, fb 等の実数マッピングは除去済み（UIに存在しないため）
         };
 
         const map = mode === 'bat' ? mapBat : mapPit;
