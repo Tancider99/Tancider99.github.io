@@ -964,6 +964,10 @@
 
     // --- 新規追加: 打球内訳の推定ロジック ---
     function estimateBattedBalls(d) {
+        // 既に実数がある場合は計算しない（再計算防止）
+        // NOTE: dにはリーグ平均値が含まれるため、再計算防止はここでは行わない方が良い
+        // if (d.est_done) return d; 
+        
         // リーグ総本塁打を使用
         const lg_hr = d.lg_hr || DEFAULTS.LG_HR;
 
@@ -1548,7 +1552,7 @@
                 
                 // d.fb は estimateBattedBalls で生成されている
                 const term1 = 13 * C.lg_xfip_ratio * d.fb;
-                const term2 = 3 * (d.bb - est.ibb + d.hbp);
+                const term2 = 3 * (d.bb - est_ibb + d.hbp);
                 const term3 = 2 * d.so;
                 
                 // xFIP = (13 * lg_xfip_ratio * FB + 3 * (BB - IBB + HBP) - 2 * SO) / IP + xfip_constant
@@ -2368,8 +2372,8 @@
             '四球': 'bb', '死球': 'hbp', '三振': 'so', '犠飛': 'sf', '犠打': 'sh', '盗塁': 'sb', '盗塁死': 'cs', '併殺': 'gidp'
         };
         const mapPit = {
-            // 修正: WHIPとの衝突を避けるため、IPは削除し「回」「投球回」に限定する
-            '回': 'ip', '投球回': 'ip', 
+            // 修正: WHIPの"IP"に反応しないように (?<!WH) を追加
+            '回': 'ip', '投球回': 'ip', 'IP': 'ip', 
             '失点': 'r', '自責': 'er', '被安打': 'h', '被本塁打': 'hr', '被本': 'hr',
             // 修正: 無四球の"四球"に反応しないように (?<!無) を追加
             '与四球': 'bb', '四球': 'bb', 
