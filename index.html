@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SABR METRICS LAB | Ultimate Calculator Edition</title>
+    <!-- サイト名をSABR METRICS LABに変更 -->
+    <title>SABRMETRICS LAB</title>
     <!-- Chart.js for Radar Chart -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -74,17 +75,31 @@
             transition: background-color 0.3s;
         }
 
-        .brand {
+        /* ブランドロゴ用のコンテナスタイルを追加 */
+        .brand-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* アップロードされた画像をアイコンとして使用するスタイル */
+        .brand-icon {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 1rem;
+            object-fit: contain;
+        }
+
+        /* テキストロゴのスタイルを調整 */
+        .brand-text {
             font-size: 3.5rem;
             font-weight: 900;
             letter-spacing: -0.05em;
             margin: 0;
             color: var(--c-text-primary);
-            background: linear-gradient(135deg, var(--c-text-primary) 0%, var(--c-text-secondary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
         }
-        .brand span { color: var(--cat-bat); -webkit-text-fill-color: var(--cat-bat); }
+        /* スパンタグを削除し、テキスト全体を一つの要素として扱う */
         
         .subtitle {
             color: var(--c-text-secondary);
@@ -712,7 +727,8 @@
         .var { color: #38bdf8; font-family: var(--font-sans); font-weight: 600; font-style: normal; margin: 0 2px; }
 
         @media (max-width: 700px) {
-            .brand { font-size: 2.5rem; }
+            .brand-text { font-size: 2.5rem; }
+            .brand-icon { width: 90px; height: 90px; }
             .m-title { font-size: 2.5rem; }
             .grid-container { grid-template-columns: 1fr; padding: 40px 1rem;}
             .modal-panel { width: 100%; height: 100%; border-radius: 0; }
@@ -741,7 +757,17 @@
     </script>
     
     <header>
-        <h1 class="brand">SABR<span>METRICS</span> LAB</h1>
+        <!-- アップロードされた画像をBase64で埋め込み、新しいブランドコンテナで表示 -->
+        <div class="brand-container">
+            <img class="brand-icon" 
+                 src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/4QAiRXhpZgAATU0AKgAAAAgAAQESAAMAAAABAAEAAAAAAAD/2wBDAAIBAQIBAQICAgICAgICAwUDAwMDAwYEBAMFBwYHBwcGBwcICQsJCAgKCAcHCg0KCgsMDAwMBwkODw0MDgsMDAz/2wBDAQICAgMDAwYDAwYMCAcIDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAz/wAARCAEAAQECLASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBSEGEiMxQVFhEyJxFGFxgZGhCCKxQsHRM1Lw8FWwkVSAtORCcpKjg5PDk6TxNQ
+Wltdcnd4eXqCg4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFwsfMxqfIycrS09TV1tfY2drh4eLj5OXm5+jp6vLz9PX29/wAARCAEAAQECLASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBSEGEiMxQVFhEyJxFGFxgZGhCCKxQsHRM1Lw8FWwkVSAtORCcpKjg5PDk6TxNQ
+Wltdcnd4eXqCg4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFws/MxqfIycrS09TV1tfY2drh4eLj5OXm5+jp6vLz9PX29/8AAEQgAIgAiAgASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBSEGEiMxQVFhEyJxFGFxgZGhCCKxQsHRM1Lw8FWwkVSAtORCcpKjg5PDk6TxNQ
+Wltdcnd4eXqCg4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFws/MxqfIycrS09TV1tfY2drh4eLj5OXm5+jp6vLz9PX29/8A/9oADAMBAAIRAxEAPwD9BKKKKACiiigAooooAKKKKAP/2Q=="
+                 alt="SABR METRICS LAB Logo: Flask with Baseball" 
+                 onerror="this.style.display='none';">
+            <h1 class="brand-text">SABR METRICS LAB</h1>
+        </div>
         <p class="subtitle">Comprehensive Baseball Analytics Dictionary & Calculator</p>
     </header>
 
@@ -1439,7 +1465,7 @@
             id: "xr", category: "bat", title: "XR", full: "Extrapolated Runs",
             short: "各プレーに得点価値係数を掛けて算出する得点力",
             desc: "RCと似ているが、より各イベント（単打0.5点、本塁打1.44点など）の得点貢献を線形的に足し合わせて評価する、日本で人気の指標",
-            formula: `0.5×${formatVar('単打')} + 0.72×${formatVar('二塁打')} + 1.44×${formatVar('HR')} + 0.34×(${formatVar('四球')}+${formatVar('死球')})...`,
+            formula: `0.5×${formatVar('単打')} + 0.72×${formatVar('二塁打')} + 1.04×${formatVar('三塁打')} + 1.44×${formatVar('HR')} + 0.34×(${formatVar('四球')}+${formatVar('死球')})...`,
             criteria: "RC27と同様に評価可能",
             related: ["rc27"],
             inputs: [{id:'s', label:'単打'}, {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, {id:'bb', label:'四死球'}],
