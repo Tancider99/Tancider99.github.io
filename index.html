@@ -291,6 +291,101 @@
             overflow: hidden;
         }
 
+        /* --- Footer --- */
+        .footer-area {
+            max-width: 1200px;
+            margin: 20px auto 60px;
+            padding: 0 2rem;
+        }
+        .footer-details {
+            background: var(--c-surface);
+            border: 1px solid var(--c-border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        .footer-details[open] {
+            box-shadow: var(--shadow-card);
+            border-color: var(--cat-bat);
+        }
+        .footer-summary {
+            padding: 20px 24px;
+            cursor: pointer;
+            font-weight: 700;
+            color: var(--c-text-secondary);
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--c-bg);
+            transition: background 0.2s, color 0.2s;
+            font-size: 0.9rem;
+        }
+        .footer-summary:hover {
+            color: var(--c-text-primary);
+            background: var(--c-surface);
+        }
+        .footer-summary::-webkit-details-marker { display: none; }
+        .footer-summary::after {
+            content: '+'; margin-left: auto; font-size: 1.2rem; font-weight: 400; transition: transform 0.3s;
+        }
+        .footer-details[open] .footer-summary::after { transform: rotate(45deg); }
+        
+        /* Icon in Footer */
+        .footer-icon svg { width: 20px; height: 20px; stroke-width: 2.5; }
+
+        .footer-content {
+            padding: 30px 40px;
+            border-top: 1px solid var(--c-border);
+            font-size: 0.9rem;
+            color: var(--c-text-secondary);
+            line-height: 1.8;
+            animation: fadeIn 0.3s ease;
+        }
+        .footer-content h3 {
+            font-size: 1rem; color: var(--c-text-primary); margin: 30px 0 12px 0;
+            display: flex; align-items: center; gap: 8px; font-weight: 800; letter-spacing: 0.05em;
+        }
+        .footer-content h3:first-child { margin-top: 0; }
+        .footer-content h3::before {
+            content: ''; display: inline-block; width: 4px; height: 1.2em; background: var(--cat-bat); border-radius: 2px;
+        }
+        .footer-content ul {
+            margin: 0; padding: 0; list-style: none;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;
+        }
+        .footer-content li { margin: 0; }
+        .footer-content a {
+            color: var(--c-text-primary); text-decoration: none; transition: all 0.2s;
+            display: flex; align-items: center; gap: 6px; padding: 8px 12px;
+            background: var(--c-bg); border-radius: 8px; border: 1px solid transparent;
+            font-weight: 600; font-size: 0.85rem;
+        }
+        .footer-content a:hover {
+            border-color: var(--cat-bat); color: var(--cat-bat); background: var(--c-surface); transform: translateX(4px);
+        }
+        .footer-content p { margin-top: 0; margin-bottom: 16px; }
+
+        .logic-box {
+            background: var(--c-bg);
+            border: 1px solid var(--c-border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .logic-title {
+            font-weight: 700; color: var(--c-text-primary); margin-bottom: 8px; font-size: 0.95rem;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .logic-cat { font-size: 0.7rem; background: var(--c-text-secondary); color: white; padding: 2px 6px; border-radius: 4px; }
+        .logic-cat.bat { background: var(--cat-bat); }
+        .logic-cat.pit { background: var(--cat-pit); }
+        .logic-formula {
+            font-family: var(--font-mono); font-size: 0.85rem; color: var(--cat-bat); background: rgba(255,255,255,0.5);
+            padding: 10px; border-radius: 6px; border: 1px solid var(--c-border); margin-bottom: 10px;
+        }
+        .logic-desc { font-size: 0.85rem; color: var(--c-text-secondary); line-height: 1.6; }
+        
         /* --- Modal --- */
         .modal-overlay {
             position: fixed;
