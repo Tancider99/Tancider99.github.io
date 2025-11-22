@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SABR METRICS LAB | Ultimate Calculator Edition</title>
+    <!-- Chart.js for Radar Chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         /* --- Design Tokens --- */
         :root {
@@ -484,6 +486,37 @@
             grid-column: 1 / -1; text-align: center; padding: 60px; color: var(--c-text-secondary);
         }
         
+        /* --- Smart Parser Style --- */
+        .parser-area {
+            margin-bottom: 20px; background: var(--c-surface);
+            border: 1px dashed var(--cat-bat); padding: 15px; border-radius: 12px;
+        }
+        .parser-textarea {
+            width: 100%; height: 120px; border: 1px solid var(--c-border); border-radius: 8px;
+            padding: 15px; font-family: var(--font-mono); font-size: 0.9rem;
+            box-sizing: border-box; resize: vertical;
+            background: #f8fafc; transition: all 0.2s;
+        }
+        .parser-textarea:focus {
+            background: #ffffff; border-color: var(--cat-bat); outline: none;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+        }
+        .parser-btn {
+            background: var(--c-text-primary); color: white; border: none; padding: 12px 24px;
+            border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+            display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;
+            transition: all 0.3s; margin-top: 10px;
+        }
+        .parser-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .parser-btn.analyzing { background: var(--cat-bat); cursor: wait; animation: pulse 1.5s infinite; }
+        
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        /* --- Chart Container --- */
+        .chart-wrapper {
+            max-width: 400px; margin: 20px auto; position: relative;
+        }
+        
         /* Helper for formula formatting */
         .var { color: #38bdf8; font-family: var(--font-sans); font-weight: 600; font-style: normal; margin: 0 2px; }
 
@@ -621,8 +654,8 @@
             0.73  * lg_hbp +
             0.966 * lg_roe +
             0.865 * lg_1b +
-            1.334 * lg_2b +
-            1.725 * lg_3b +
+            1.334 * d.lg_2b +
+            1.725 * d.lg_3b +
             2.065 * lg_hr;
             
         const lg_woba_std = woba_denom > 0 ? woba_num_std / woba_denom : 0;
@@ -1794,23 +1827,32 @@
         const inputsHtml = fields.map(inp => createInputHtml(inp)).join('');
         
         // Generate Advanced Settings (Shared)
-        // Using the same structure as individual calculators for League constants
-        // For simplicity, we'll just inject a hidden container that holds default league values or use global defaults in calculation
-        // To allow editing, we can reuse the advanced inputs html generation but it's getting large.
-        // Let's just add the most critical League Stats for context.
-        const advFields = isBat ? 
-            ['lg_pa', 'lg_ab', 'lg_runs', 'lg_hits', 'lg_bb', 'lg_hbp', 'lg_sf'] : 
-            ['lg_pa', 'lg_runs', 'lg_hits', 'lg_bb']; // Pitching simplified context
-            
-        // Find definitions for these advanced fields from existing terms (e.g., from WAR)
         const warTerm = terms.find(t => t.id === (isBat ? 'war' : 'pit_war'));
         const advInputsHtml = warTerm.inputs.filter(i => i.advanced).map(inp => createInputHtml(inp)).join('');
+
+        // Smart Parser HTML (Text Only AI)
+        const parserHtml = `
+            <div class="parser-area" style="border-color:${catColor}">
+                <div style="font-size:0.8rem; font-weight:700; color:var(--c-text-secondary); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <span>🤖 AIテキスト解析 (AI ANALYZER)</span>
+                    <span style="font-size:0.7em; background:#e2e8f0; padding:2px 6px; border-radius:4px;">TEXT MODE</span>
+                </div>
+                <textarea class="parser-textarea" id="smart-text" placeholder="ここにWebサイトの成績表などをコピー＆ペーストしてください...&#13;&#10;（例：打率.300 試合143 本塁打20...）"></textarea>
+                
+                <button class="parser-btn" id="parser-btn" onclick="parseSmartContent('${mode}')" style="background:${catColor}">
+                    <span>✨</span> AIでテキストを解析して入力
+                </button>
+                <div id="parser-msg" style="font-size:0.85rem; color:var(--c-text-secondary); margin-top:10px; text-align:center; display:none; line-height:1.5;"></div>
+            </div>
+        `;
 
         const html = `
             <div class="section-label">INPUT DATA / データ入力</div>
             <div class="calc-container" style="border-color:${catColor}">
                 
-                <!-- Preset Controls (Added to Batch Mode) -->
+                ${parserHtml}
+
+                <!-- Preset Controls -->
                 <div class="preset-bar">
                     <div class="preset-label">💾 成績プリセット (自動入力)</div>
                     <select class="preset-select" id="preset-select">
@@ -1850,9 +1892,93 @@
             modal.classList.add('show');
         });
         
-        // Initialize Preset List for Batch Mode
         updatePresetList();
     }
+
+    // --- Smart Text Parser Logic ---
+    window.parseSmartContent = function(mode) {
+        const textInput = document.getElementById('smart-text');
+        const btn = document.getElementById('parser-btn');
+        const msg = document.getElementById('parser-msg');
+
+        const text = textInput.value.trim();
+
+        if (!text) {
+            alert("テキストを入力してください");
+            return;
+        }
+
+        // AI分析演出
+        btn.innerHTML = '<span>⏳</span> テキスト構造を解析中...';
+        btn.classList.add('analyzing');
+        msg.style.display = 'none';
+
+        setTimeout(() => {
+            // 解析実行
+            btn.innerHTML = '<span>✨</span> AIでテキストを解析して入力';
+            btn.classList.remove('analyzing');
+            
+            runParser(text, mode);
+            
+        }, 800); // 演出用のウェイト
+    };
+
+    function runParser(text, mode) {
+        const msg = document.getElementById('parser-msg');
+        
+        // AI Analysis Logic (Advanced Regex Pattern Matching)
+        // Added synonyms for better matching
+        const mapBat = {
+            '打席': 'pa', '打数': 'ab', '安打': 'h', '二塁打': 'd', '三塁打': 't', '本塁打': 'hr', '本': 'hr', 'HR': 'hr',
+            '四球': 'bb', '死球': 'hbp', '三振': 'so', '犠飛': 'sf', '犠打': 'sh', '盗塁': 'sb', '盗塁死': 'cs', '併殺': 'gidp'
+        };
+        const mapPit = {
+            '回': 'ip', '投球回': 'ip', 'IP': 'ip', '失点': 'r', '自責': 'er', '被安打': 'h', '被本塁打': 'hr', '被本': 'hr',
+            '与四球': 'bb', '四球': 'bb', '与死球': 'hbp', '死球': 'hbp', '奪三振': 'so', '三振': 'so', '打者': 'bf'
+        };
+
+        const map = mode === 'bat' ? mapBat : mapPit;
+        let count = 0;
+        let extractedInfo = [];
+
+        for (const [key, id] of Object.entries(map)) {
+            // Regex: Label followed by space/colon/tab, then number
+            const regex = new RegExp(`${key}[:\\s　]*([0-9]+(?:\\.[0-9]+)?)`, 'g');
+            const match = regex.exec(text);
+            if(match) {
+                const val = parseFloat(match[1]);
+                const el = document.getElementById(`calc-${id}`);
+                if(el) {
+                    el.value = val;
+                    el.style.backgroundColor = "#dcfce7"; // Success Color
+                    setTimeout(()=>el.style.backgroundColor="", 2000);
+                    count++;
+                    if(extractedInfo.length < 6) extractedInfo.push(key);
+                }
+            }
+        }
+
+        msg.style.display = 'block';
+        if (count > 0) {
+            msg.innerHTML = `
+                <div style="color:var(--cat-tot); font-weight:bold;">
+                    ✅ 解析完了: ${count} 項目を抽出しました
+                </div>
+                <div style="font-size:0.8em; color:#64748b;">
+                    検出: ${extractedInfo.join(', ')}${extractedInfo.length>=6 ? '...' : ''}
+                </div>
+            `;
+        } else {
+            msg.innerHTML = `
+                <div style="color:#ef4444;">
+                    ❌ データが見つかりませんでした。<br>
+                    「打率.300 本塁打20」のように項目名と数字が含まれるテキストを貼り付けてください。
+                </div>
+            `;
+        }
+    }
+
+    let radarChartInstance = null;
 
     function runBatchCalc(mode) {
         const isBat = mode === 'bat';
@@ -1872,18 +1998,14 @@
         // Calculate Indicators
         let results = [];
         
-        // ユーザー指定の指標IDリスト
+        // ユーザー指定の指標IDリスト (修正: wRC+, xFIP, SIERAを含める)
         const targetIds = isBat ? 
-            ['war', 'wrc_plus', 'woba', 'iso', 'babip', 'k_pct', 'bb_pct'] : 
+            ['war', 'wrc_plus', 'woba', 'iso', 'babip', 'k_pct', 'bb_pct', 'wsb'] : 
             ['pit_war', 'fip', 'xfip', 'siera', 'k_pct_pit', 'bb_pct_pit'];
 
         terms.forEach(term => {
-            // 指定されたIDの指標のみ計算・表示する
             if (targetIds.includes(term.id) && term.calc) {
                 try {
-                    // Check if we have necessary inputs? 
-                    // term.calc will run with 0s if missing, which is acceptable for batch
-                    // However, we should try to avoid NaN results
                     const res = term.calc(data);
                     if (res !== "---" && res !== "NaN" && res !== "Infinity") {
                         results.push({
@@ -1891,14 +2013,29 @@
                             full: term.full,
                             value: res,
                             criteria: term.criteria,
-                            cat: term.category
+                            cat: term.category,
+                            id: term.id
                         });
                     }
-                } catch(e) {
-                    // skip errors
-                }
+                } catch(e) {}
             }
         });
+
+        // --- Radar Chart Logic ---
+        let radarHtml = '';
+        if (results.length > 0) {
+            radarHtml = `
+                <div class="chart-wrapper">
+                    <canvas id="radarChart"></canvas>
+                </div>
+                <div style="font-size:0.75rem; color:var(--c-text-secondary); text-align:center; margin-bottom:20px; line-height:1.5;">
+                    <strong>【レーダーチャート評価項目】</strong><br>
+                    ${mode === 'bat' 
+                        ? '総合攻撃力(wRC+) / パワー(ISO) / 走力(wSB) / 選球眼(BB%) / 守備(UZR)' 
+                        : '球威(K%) / 制球(BB%) / 将来性(xFIP) / 真の実力(SIERA) / ゴロ率(GB%)'}
+                </div>
+            `;
+        }
 
         // Render Table
         if (results.length === 0) {
@@ -1907,8 +2044,9 @@
         }
 
         let tableHtml = `
-            <div class="section-label">CALCULATION RESULTS / 結果一覧</div>
-            <table class="criteria-table">
+            <div class="section-label">ANALYSIS RESULTS / 分析結果</div>
+            ${radarHtml}
+            <table class="criteria-table" style="margin-top:20px;">
                 <thead>
                     <tr style="background:var(--c-bg);">
                         <th style="padding-left:10px;">指標 (METRIC)</th>
@@ -1939,7 +2077,6 @@
 
         tableHtml += `</tbody></table>`;
         
-        // Add Copy Button
         tableHtml += `
             <button class="calc-btn" style="margin-top:20px; background:var(--c-text-secondary);" onclick="copyBatchResults()">
                 📋 結果をコピー (COPY TEXT)
@@ -1949,6 +2086,113 @@
         const resArea = document.getElementById('batch-results-area');
         resArea.innerHTML = tableHtml;
         resArea.scrollIntoView({behavior: 'smooth'});
+
+        // --- Render Chart ---
+        if (radarChartInstance) {
+            radarChartInstance.destroy();
+        }
+        
+        const ctx = document.getElementById('radarChart');
+        if (ctx) {
+            // Calculate Scores (0-100)
+            let scores = [];
+            let labels = [];
+            
+            // Helper to find calculated value from results or recalc
+            const getVal = (id) => {
+                const r = results.find(x => x.id === id);
+                if (r) return parseFloat(r.value);
+                // Fallback: recalc directly if missing from table
+                const t = terms.find(x => x.id === id);
+                return t ? parseFloat(t.calc(data)) : 0;
+            };
+
+            if (isBat) {
+                // Batting Scores
+                // 1. wRC+ (Overall Offense): 40(min) - 180(max) -> 100 is avg
+                const wrc = getVal('wrc_plus') || 100;
+                const scoreWrc = Math.min(100, Math.max(0, (wrc - 40) / 140 * 100));
+                
+                // 2. ISO (Power): .050 - .350
+                const slg = (data.h - data.d - data.t - data.hr + 2*data.d + 3*data.t + 4*data.hr) / data.ab || 0;
+                const avg = data.h / data.ab || 0;
+                const iso = slg - avg;
+                const scoreIso = Math.min(100, Math.max(0, (iso - 0.050) / 0.300 * 100));
+                
+                // 3. wSB (Speed/Running): -5 - +10
+                // wSB is not in default batch targets sometimes, so ensure calculation
+                const wsb = getVal('wsb') || (0.2*data.sb - 0.4*data.cs) || 0; 
+                const scoreWsb = Math.min(100, Math.max(0, (wsb - (-5)) / 15 * 100));
+                
+                // 4. BB% (Eye): 3% - 18%
+                const bb_pct = data.bb / data.pa || 0;
+                const scoreBb = Math.min(100, Math.max(0, (bb_pct - 0.03) / 0.15 * 100));
+                
+                // 5. UZR (Defense): -15 - +15
+                const uzr = parseFloat(data.def) || 0;
+                const scoreUzr = Math.min(100, Math.max(0, (uzr - (-15)) / 30 * 100));
+
+                labels = ['wRC+', 'ISO', 'wSB', 'BB%', 'UZR'];
+                scores = [scoreWrc, scoreIso, scoreWsb, scoreBb, scoreUzr];
+
+            } else {
+                // Pitching Scores
+                // 1. K% (Stuff): 10% - 35%
+                const k_pct = data.so / data.bf || 0;
+                const scoreK = Math.min(100, Math.max(0, (k_pct - 0.10) / 0.25 * 100));
+                
+                // 2. BB% (Control): 15% - 2% (Reverse)
+                const bb_pct = data.bb / data.bf || 0.10;
+                const scoreBb = Math.min(100, Math.max(0, (0.15 - bb_pct) / 0.13 * 100));
+                
+                // 3. xFIP (Expected Performance): 6.00 - 2.00 (Reverse)
+                const xfip = getVal('xfip') || 4.00;
+                const scoreXfip = Math.min(100, Math.max(0, (6.00 - xfip) / 4.00 * 100));
+                
+                // 4. SIERA (True Skill): 6.00 - 2.00 (Reverse)
+                const siera = getVal('siera') || 4.00;
+                const scoreSiera = Math.min(100, Math.max(0, (6.00 - siera) / 4.00 * 100));
+                
+                // 5. GB% (Groundball): 30% - 60%
+                const gb_pct = data.gb > 0 ? data.gb / (data.gb + data.fb + data.pu) : 0.45;
+                const scoreGb = Math.min(100, Math.max(0, (gb_pct - 0.30) / 0.30 * 100));
+
+                labels = ['K%', 'BB%', 'xFIP', 'SIERA', 'GB%'];
+                scores = [scoreK, scoreBb, scoreXfip, scoreSiera, scoreGb];
+            }
+
+            radarChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Score',
+                        data: scores,
+                        backgroundColor: isBat ? 'rgba(14, 165, 233, 0.2)' : 'rgba(244, 63, 94, 0.2)',
+                        borderColor: isBat ? '#0ea5e9' : '#f43f5e',
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: isBat ? '#0ea5e9' : '#f43f5e',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 100,
+                            ticks: { display: false }, // Hide numbers
+                            pointLabels: {
+                                font: { size: 14, weight: '800', family: 'var(--font-mono)' },
+                                color: '#475569'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
     }
 
     function copyBatchResults() {
