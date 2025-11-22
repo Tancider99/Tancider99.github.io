@@ -614,7 +614,7 @@
 
     // --- Helper to calculate Derived Constants ---
     function calcDerived(d) {
-        // 基本入力値 (修正: 入力が0や空の場合はデフォルト値を使用するように || 演算子に変更)
+        // 基本入力値
         const lg_hr = d.lg_hr || DEFAULTS.LG_HR;
         const lg_bb = d.lg_bb || DEFAULTS.LG_BB;
         // 詳細パラメータ
@@ -693,6 +693,63 @@
         const xfip_constant = lg_era_est - lg_xfip_component;
 
         return { lg_r_pa, rpw, rep_per_pa, lg_woba, lg_tra, woba_scale, fitting_ratio, xfip_constant, lg_xfip_ratio };
+    }
+
+    // --- 新規追加: 打球内訳の推定ロジック ---
+    function estimateBattedBalls(d) {
+        // 既に実数がある場合は計算しない（再計算防止）
+        if (d.est_done) return d;
+
+        // 1. 打者数(BF)の確保
+        let bf = d.bf;
+        if (!bf) {
+            // BFがなければ投球回から推定 (IP x 4.20 程度が平均的)
+            bf = d.ip * 4.20; 
+        }
+
+        // 2. 三振、四死球
+        const so = d.so || (d.ip * 0.8); // 仮置き
+        const bb = d.bb || (d.ip * 0.3);
+        const hbp = d.hbp || 0;
+
+        // 3. 打球数 (Batted Balls) = BF - SO - BB - HBP
+        let batted = bf - so - bb - hbp;
+        if (batted < 0) batted = 0;
+
+        // 4. ゴロ率 (GB%) の取得
+        // セレクトボックスの値(文字列)を数値化。デフォルトは平均の45%
+        let gb_pct_val = 45; 
+        if (d.gb_type) {
+            gb_pct_val = parseFloat(d.gb_type);
+        }
+
+        const gb_rate = gb_pct_val / 100;
+        const ld_rate = 0.21; // Line Driveは投手によらず約21%で一定とするのが一般的
+        
+        // 残りがフライ系 (FB + PU)
+        let fb_system_rate = 1.0 - gb_rate - ld_rate;
+        if (fb_system_rate < 0) fb_system_rate = 0;
+
+        // 内野フライ率 (IFFB% / FB_total)
+        // フライ全体のうち約10%が内野フライと仮定
+        const iffb_rate = 0.10; 
+
+        // 実数計算
+        const gb = batted * gb_rate;
+        const ld = batted * ld_rate;
+        const fb_total = batted * fb_system_rate;
+        const pu = fb_total * iffb_rate;     // 内野フライ
+        const fb = fb_total - pu;            // 純粋な外野フライ
+
+        // データオブジェクトに注入
+        d.gb = gb;
+        d.ld = ld;
+        d.fb = fb;
+        d.pu = pu;
+        d.bf = bf; // 推定したBFも保存
+        d.est_done = true; // フラグ
+
+        return d;
     }
 
     // --- Helper: 詳細スタッツの計算 (Calculate Details from Inputs) ---
@@ -1211,14 +1268,21 @@
         {
             id: "xfip", category: "pit", title: "xFIP", full: "Expected FIP",
             short: "被本塁打の代わりに「フライボール数」を用いたFIPの進化版。",
-            desc: "HR/FB（フライに対する本塁打の割合）をリーグ平均値に置き換えて計算します。被本塁打の運要素を排除し、より純粋な実力を測ります。<br>計算式: (13×予想HR + 3×(四球-故意四球+死球) - 2×三振)÷IP + 定数",
-            // formula: `(13×(LgHR/LgFB%)×FB + 3×(BB-IBB+HBP) - 2×SO) ÷ IP + 定数`,
+            desc: "HR/FB（フライに対する本塁打の割合）をリーグ平均値に置き換えて計算します。被本塁打の運要素を排除し、より純粋な実力を測ります。<br>※選択された打球傾向（ゴロ率）からフライ数を自動推定して計算します。",
             formula: `(13 × (FB × LgHR/LgFB) + 3 × (BB - IBB + HBP) - 2 × SO) ÷ IP + 定数`,
             criteria: "防御率スケール",
             aiMode: true,
             inputs: [
-                {id:'fb', label:'フライ数'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'}, {id:'so', label:'奪三振'}, {id:'ip', label:'投球回'},
-                // 詳細入力: xFIP計算に必要なリーグ定数
+                {id:'ip', label:'投球回'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'},
+                // 変更: 実数入力廃止 -> 傾向選択へ
+                {id:'gb_type', label:'打球傾向(GB%)', type:'select', options:{
+                    '55':'55% (超ゴロP)', 
+                    '50':'50% (ゴロP)', 
+                    '45':'45% (平均)', 
+                    '40':'40% (フライP)', 
+                    '35':'35% (超フライP)'
+                }},
+                // 詳細入力
                 {id:'lg_hr', label:'リーグ総HR', type:'number', advanced:true, default: DEFAULTS.LG_HR},
                 {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
                 {id:'lg_bb', label:'リーグ総四球', type:'number', advanced:true, default: DEFAULTS.LG_BB},
@@ -1226,11 +1290,13 @@
                 {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS}
             ],
             calc: (d) => {
+                // 打球内訳を推定
+                estimateBattedBalls(d);
+                
                 const C = calcDerived(d);
-                // 故意四球の推定 (四球の約4%)
                 const est_ibb = d.bb * 0.04;
                 
-                // xFIP = (13 * (Lg_HR / Lg_FB) * FB + 3 * (BB - IBB + HBP) - 2 * SO) / IP + Constant
+                // d.fb は estimateBattedBalls で生成されている
                 const term1 = 13 * C.lg_xfip_ratio * d.fb;
                 const term2 = 3 * (d.bb - est_ibb + d.hbp);
                 const term3 = 2 * d.so;
@@ -1243,34 +1309,77 @@
         {
             id: "siera", category: "pit", title: "SIERA", full: "Skill-Interactive Earned Run Average",
             short: "打球の質や三振・四球を考慮した、FIPより精度の高い将来予測指標。",
-            desc: "ゴロ、フライ、内野フライの構成比や、それが三振・四球とどう組み合わさるかを考慮して計算される。投球の「質」を最も正確に反映するとされる指標の一つ。",
-            formula: `6.145 - 16.986×(SO/PA) + 11.434×(BB/PA) - 1.858×((GB-FB-PU)/PA) + ...`,
-            criteria: "防御率スケール",
+            desc: "投球の「質」を最も正確に反映するとされる指標。ゴロ率や三振、四球のバランスから算出されます。<br>※選択された打球傾向から打球内訳（ゴロ・フライ等）を自動推定して計算します。",
+            formula: `6.145 - 16.99(SO/PA) + 11.43(BB/PA) - 1.86((GB-FB-PU)/PA) + ...`,
+            criteria: "防御率スケール (3.00: 優秀)",
             related: ["fip", "xfip", "tra"],
+            aiMode: true,
             inputs: [
-                {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, 
-                {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}, {id:'pu', label:'内野フライ'},
-                {id:'bf', label:'打者数'}
+                {id:'ip', label:'投球回'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, 
+                // 変更: 実数入力廃止 -> 傾向選択へ
+                {id:'gb_type', label:'打球傾向(GB%)', type:'select', options:{
+                    '55':'55% (超ゴロP)', 
+                    '50':'50% (ゴロP)', 
+                    '45':'45% (平均)', 
+                    '40':'40% (フライP)', 
+                    '35':'35% (超フライP)'
+                }},
+                {id:'bf', label:'打者数', advanced:true}
             ],
             calc: (d) => {
+                // 打球内訳を推定
+                estimateBattedBalls(d);
+
                 const pa = d.bf;
-                if(!pa) return "---";
-                
+                // ゼロ除算防止
+                if (!pa || pa === 0) return "---";
+
+                // SIERA計算 (FanGraphs Formula)
+                // d.gb, d.fb, d.pu は推定済み
                 const A = d.so / pa;
                 const B = d.bb / pa;
                 const C = (d.gb - d.fb - d.pu) / pa;
                 
                 const val = 6.145 - 16.986*A + 11.434*B - 1.858*C + 7.653*Math.pow(A,2) + 6.664*Math.pow(C,2) + 10.130*A*C - 5.195*B*C;
-                return val.toFixed(2);
+                
+                return isFinite(val) ? val.toFixed(2) : "---";
             }
         },
         {
             id: "tra", category: "pit", title: "tRA", full: "True Runs Allowed",
             short: "打球の種類（ゴロ・フライ）も考慮した究極の指標。",
-            desc: "FIPを発展させ、奪三振・四死球に加え、打たれた打球がゴロかフライかライナーかによって期待失点値を割り当てて算出する。1.02などのサイトで採用されている。",
+            desc: "FIPを発展させ、各打球種別（ライナー、ゴロ、フライ）の期待失点値を割り当てて算出する指標。<br>※打球傾向から打球数を推定して計算します。",
             formula: `打球種別ごとの期待失点値の総和`,
             criteria: "防御率スケール",
-            related: ["fip"]
+            related: ["fip"],
+            aiMode: true,
+            inputs: [
+                {id:'ip', label:'投球回'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'}, {id:'hr', label:'被HR'},
+                {id:'gb_type', label:'打球傾向(GB%)', type:'select', options:{
+                    '55':'55% (超ゴロP)', 
+                    '50':'50% (ゴロP)', 
+                    '45':'45% (平均)', 
+                    '40':'40% (フライP)', 
+                    '35':'35% (超フライP)'
+                }}
+            ],
+            calc: (d) => {
+                estimateBattedBalls(d);
+                // 簡易tRA計算 (係数は近似値)
+                // SO: 0, BB: 0.3, HBP: 0.33, HR: 1.4
+                // GB: 0.05, FB: 0.15, LD: 0.3, PU: -0.1
+                const val = (
+                    0 * d.so + 
+                    0.3 * d.bb + 
+                    0.33 * d.hbp + 
+                    1.4 * d.hr +
+                    0.05 * d.gb +
+                    0.15 * d.fb +
+                    0.3 * d.ld +
+                    -0.1 * d.pu
+                ) / d.ip * 9; // Scale to RA9
+                return isFinite(val) ? (val * 0.92).toFixed(2) : "---"; // Convert RA9 to ERA scale
+            }
         },
         {
             id: "k_9", category: "pit", title: "K/9", full: "Strikeouts per 9",
@@ -1325,51 +1434,45 @@
             calc: (d) => ((d.obp + d.slg / 3) * 1000).toFixed(0)
         },
         {
-            id: "ld_pct_bat", category: "bat", title: "LD%", full: "Line Drive Percentage (Batter)",
-            short: "全打球に占めるライナーの割合。",
-            desc: "ライナーはヒットになる確率が最も高い打球。高いほどBABIPが高くなりやすい。",
-            formula: `${formatVar('LD')} ÷ (${formatVar('LD')}+${formatVar('GB')}+${formatVar('FB')})`,
-            criteria: "20%: 平均",
-            inputs: [{id:'ld', label:'ライナー'}, {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}],
-            calc: (d) => (d.ld / (d.ld + d.gb + d.fb) * 100).toFixed(1) + '%'
-        },
-        {
-            id: "gb_pct_bat", category: "bat", title: "GB%", full: "Ground Ball Percentage (Batter)",
-            short: "全打球に占めるゴロの割合。",
-            desc: "ゴロが多い打者は併殺打のリスクが高いが、足が速ければ内野安打も狙える。",
-            formula: `${formatVar('GB')} ÷ (${formatVar('LD')}+${formatVar('GB')}+${formatVar('FB')})`,
-            criteria: "45%: 平均",
-            inputs: [{id:'ld', label:'ライナー'}, {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}],
-            calc: (d) => (d.gb / (d.ld + d.gb + d.fb) * 100).toFixed(1) + '%'
-        },
-        {
-            id: "fb_pct_bat", category: "bat", title: "FB%", full: "Fly Ball Percentage (Batter)",
-            short: "全打球に占めるフライの割合。",
-            desc: "フライが多い打者は長打（本塁打）の可能性が高い。",
-            formula: `${formatVar('FB')} ÷ (${formatVar('LD')}+${formatVar('GB')}+${formatVar('FB')})`,
-            criteria: "35%: 平均",
-            inputs: [{id:'ld', label:'ライナー'}, {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}],
-            calc: (d) => (d.fb / (d.ld + d.gb + d.fb) * 100).toFixed(1) + '%'
-        },
-        
-        /* ---------------- 投球 (Pitching) ---------------- */
-        {
-            id: "gb_pct", category: "pit", title: "GB%", full: "Ground Ball Percentage",
-            short: "全打球に占めるゴロの割合。",
-            desc: "ゴロが多い投手は長打を浴びにくく、併殺を取りやすい。一般的に45%前後が平均。",
-            formula: `${formatVar('GB')} ÷ (${formatVar('LD')}+${formatVar('GB')}+${formatVar('FB')})`,
+            id: "gb_pct", category: "pit", title: "GB%", full: "Ground Ball Percentage (Est)",
+            short: "打球傾向設定に基づく推定ゴロ率。",
+            desc: "選択された打球傾向設定から算出されたゴロ率を表示します。",
+            formula: `推定値`,
             criteria: "45%: 平均 / 50%超: ゴロP",
-            inputs: [{id:'ld', label:'ライナー'}, {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}],
-            calc: (d) => (d.gb / (d.ld + d.gb + d.fb) * 100).toFixed(1) + '%'
+            aiMode: true,
+            inputs: [
+                {id:'gb_type', label:'打球傾向(GB%)', type:'select', options:{
+                    '55':'55% (超ゴロP)', 
+                    '50':'50% (ゴロP)', 
+                    '45':'45% (平均)', 
+                    '40':'40% (フライP)', 
+                    '35':'35% (超フライP)'
+                }}
+            ],
+            calc: (d) => d.gb_type ? d.gb_type + '%' : "45%"
         },
         {
-            id: "fb_pct", category: "pit", title: "FB%", full: "Fly Ball Percentage",
-            short: "全打球に占めるフライの割合。",
-            desc: "フライが多い投手は三振が多い傾向がある一方、本塁打を打たれるリスクも高まる。",
-            formula: `${formatVar('FB')} ÷ (${formatVar('LD')}+${formatVar('GB')}+${formatVar('FB')})`,
-            criteria: "45%: 平均",
-            inputs: [{id:'ld', label:'ライナー'}, {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}],
-            calc: (d) => (d.fb / (d.ld + d.gb + d.fb) * 100).toFixed(1) + '%'
+            id: "fb_pct", category: "pit", title: "FB%", full: "Fly Ball Percentage (Est)",
+            short: "打球傾向設定に基づく推定フライ率。",
+            desc: "選択された打球傾向設定から算出されたフライ率（内野フライ含む）を表示します。",
+            formula: `推定値`,
+            criteria: "35%: 平均",
+            aiMode: true,
+            inputs: [
+                {id:'gb_type', label:'打球傾向(GB%)', type:'select', options:{
+                    '55':'55% (超ゴロP)', 
+                    '50':'50% (ゴロP)', 
+                    '45':'45% (平均)', 
+                    '40':'40% (フライP)', 
+                    '35':'35% (超フライP)'
+                }}
+            ],
+            calc: (d) => {
+                const gb = parseFloat(d.gb_type || 45);
+                // LD 21%固定と仮定した場合の残り
+                const fb = 100 - gb - 21;
+                return fb + '%';
+            }
         },
 
         /* ---------------- 守備 (Fielding) ---------------- */
@@ -1817,7 +1920,14 @@
                 {id:'h', label:'被安打'}, {id:'hr', label:'被本塁打'}, 
                 {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'},
                 {id:'so', label:'奪三振'}, {id:'bf', label:'打者数'}, // 追加: K%, BB%用
-                {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}, {id:'pu', label:'内野フライ'},
+                // 変更: 実数入力廃止 -> 傾向選択へ
+                {id:'gb_type', label:'打球傾向(GB%)', type:'select', options:{
+                    '55':'55% (超ゴロP)', 
+                    '50':'50% (ゴロP)', 
+                    '45':'45% (平均)', 
+                    '40':'40% (フライP)', 
+                    '35':'35% (超フライP)'
+                }},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 {id:'role', label:'役割', type:'select', options:{'sp':'先発', 'rp':'救援'}}
             ];
@@ -1939,6 +2049,7 @@
             // 修正: 無四球の"四球"に反応しないように (?<!無) を追加
             '与四球': 'bb', '(?<!無)四球': 'bb', 
             '与死球': 'hbp', '死球': 'hbp', '奪三振': 'so', '三振': 'so', '打者': 'bf'
+            // NOTE: 解析ロジックからも gb, fb 等の実数マッピングは除去済み（UIに存在しないため）
         };
 
         const map = mode === 'bat' ? mapBat : mapPit;
