@@ -544,10 +544,15 @@
         LG_PA: 28500,
         LG_RUNS: 2800,
         LG_HITS: 6900,
-        LG_2B: 1150,  // 変更
-        LG_3B: 120,   // 変更
-        LG_HR: 485
-        // LG_OPS は削除
+        LG_2B: 1150,
+        LG_3B: 120,
+        LG_HR: 485, 
+        LG_BB: 2300,
+        // 新規追加: リーグ総数詳細（OBP/SLGの代わり）
+        LG_AB: 28750, // 打数 (変更: 24900 -> 28750)
+        LG_HBP: 300,  // 死球 (変更: 200 -> 300)
+        LG_SF: 190,   // 犠飛 (変更: 230 -> 190)
+        LG_SH: 550    // 犠打 (変更: 700 -> 550)
     };
 
     // Park Factors
@@ -569,13 +574,26 @@
 
     // --- Helper to calculate Derived Constants ---
     function calcDerived(d) {
+        // 基本入力値
+        const lg_hr = DEFAULTS.LG_HR;
+        const lg_bb = d.lg_bb !== undefined ? d.lg_bb : DEFAULTS.LG_BB;
+        // 新規詳細パラメータ
+        const lg_ab = d.lg_ab !== undefined ? d.lg_ab : DEFAULTS.LG_AB;
+        const lg_hbp = d.lg_hbp !== undefined ? d.lg_hbp : DEFAULTS.LG_HBP;
+        const lg_sf = d.lg_sf !== undefined ? d.lg_sf : DEFAULTS.LG_SF;
+        const lg_sh = d.lg_sh !== undefined ? d.lg_sh : DEFAULTS.LG_SH;
+
         const isDefault = (
             parseFloat(d.lg_pa) === DEFAULTS.LG_PA &&
             parseFloat(d.lg_runs) === DEFAULTS.LG_RUNS &&
             parseFloat(d.lg_hits) === DEFAULTS.LG_HITS &&
             parseFloat(d.lg_2b) === DEFAULTS.LG_2B &&
             parseFloat(d.lg_3b) === DEFAULTS.LG_3B &&
-            parseFloat(d.lg_hr) === DEFAULTS.LG_HR
+            parseFloat(lg_bb) === DEFAULTS.LG_BB &&
+            parseFloat(lg_ab) === DEFAULTS.LG_AB &&
+            parseFloat(lg_hbp) === DEFAULTS.LG_HBP &&
+            parseFloat(lg_sf) === DEFAULTS.LG_SF &&
+            parseFloat(lg_sh) === DEFAULTS.LG_SH
         );
 
         if (isDefault) {
@@ -584,28 +602,69 @@
                 rpw: 8.5,
                 rep_per_pa: 15.5 / 600, 
                 lg_woba: 0.304,
-                woba_scale: 1.24,
-                lg_tra: 3.90
+                woba_scale: 1.28,
+                lg_tra: 3.30,
+                fitting_ratio: 1.0
             };
         }
 
+        // --- リーグ詳細データの計算 ---
+        const lg_ibb = lg_bb * 0.03; 
+        const lg_roe = Math.max(0, d.lg_pa - (lg_ab + lg_bb + lg_hbp + lg_sf + lg_sh));
+        const lg_1b = d.lg_hits - d.lg_2b - d.lg_3b - lg_hr;
+        const lg_obp = (d.lg_hits + lg_bb + lg_hbp) / (lg_ab + lg_bb + lg_hbp + lg_sf);
+
+        // --- wOBA計算 (基準係数: wOBA Scale=1.28想定) ---
+        const woba_denom = lg_ab + lg_bb - lg_ibb + lg_hbp + lg_sf;
+        
+        // 基準係数でのリーグwOBA算出
+        const woba_num_std = 
+            0.692 * (lg_bb - lg_ibb) +
+            0.73  * lg_hbp +
+            0.966 * lg_roe +
+            0.865 * lg_1b +
+            1.334 * d.lg_2b +
+            1.725 * d.lg_3b +
+            2.065 * lg_hr;
+            
+        const lg_woba_std = woba_denom > 0 ? woba_num_std / woba_denom : 0;
+
+        // --- 係数補正比率 (Fitting Ratio) ---
+        // リーグ出塁率と基準wOBAの比率から、環境に合わせた係数の補正倍率を算出
+        const fitting_ratio = (lg_woba_std > 0 && lg_obp > 0) ? (lg_obp / lg_woba_std) : 1.0;
+
+        // 実際のリーグwOBA (OBPと一致するように補正される)
+        const lg_woba = lg_woba_std * fitting_ratio;
+
+        // --- wOBA Scaleの計算 ---
+        // 基準値1.28に補正倍率を掛ける
+        const woba_scale = 1.28 * fitting_ratio;
+
+        // --- その他パラメータ ---
         const lg_r_pa = d.lg_runs / d.lg_pa;
         const est_lg_ip = d.lg_pa / 4.25;
         const rpw = 20 * (d.lg_runs / est_lg_ip);
-        
-        const est_bb = d.lg_pa * 0.09; 
-        const est_obp = (d.lg_hits + est_bb) / d.lg_pa; 
-        
-        const lg_1b = d.lg_hits - d.lg_2b - d.lg_3b - d.lg_hr;
-        
-        const raw_woba_numerator = (0.69 * est_bb) + (0.89 * lg_1b) + (1.27 * d.lg_2b) + (1.62 * d.lg_3b) + (2.10 * d.lg_hr);
-        const lg_raw_woba = raw_woba_numerator / d.lg_pa;
-        const woba_scale = est_obp / lg_raw_woba;
-        const lg_woba = lg_raw_woba * woba_scale;
         const rep_per_pa = 0.12 * (lg_woba / woba_scale);
-        const lg_tra = (d.lg_runs / est_lg_ip) * 9 * 0.92;
+        
+        let lg_tra = (d.lg_runs / est_lg_ip) * 9 * 0.92;
+        if (isDefault) lg_tra = 3.30;
 
-        return { lg_r_pa, rpw, rep_per_pa, lg_woba, lg_tra, woba_scale };
+        return { lg_r_pa, rpw, rep_per_pa, lg_woba, lg_tra, woba_scale, fitting_ratio };
+    }
+
+    // --- Helper: 詳細スタッツの計算 (Calculate Details from Inputs) ---
+    function estimateDetails(d) {
+        // IBBは入力がないため概算 (四球の約4%)
+        const ibb = d.bb * 0.04;
+
+        // ROE (失策出塁) の計算
+        // ROE = 打席 - (打数 + 四球 + 死球 + 犠飛 + 犠打)
+        const roe = Math.max(0, d.pa - (d.ab + d.bb + d.hbp + d.sf + d.sh));
+
+        // 単打 (S)
+        const s = d.h - d.d - d.t - d.hr;
+
+        return { ibb, roe, s };
     }
 
     // --- Terms Database ---
@@ -614,42 +673,59 @@
         {
             id: "war", category: "tot", title: "WAR (野手)", full: "Wins Above Replacement (Batter)",
             short: "打撃、走塁、守備を総合的に評価して野手の貢献度を表す指標。",
-            desc: "代替可能な控え選手（リプレイスメント・レベルの選手）が出場する場合に比べてどれだけチームの勝利数を増やしたかによって計算される。<br>デフォルト設定では RPW=8.5, R/PA=0.092, 代替水準=15.5/600打席, Lg wOBA=.304 を使用します。",
+            desc: "代替可能な控え選手（リプレイスメント・レベルの選手）が出場する場合に比べてどれだけ勝利数を増やしたかによって計算される。<br>wOBA係数はリーグ環境（wOBA Scale）に合わせて自動補正されます。",
             formula: `(wRAA + UZR + BaseRunning + ポジション補正 + 代替水準補正) ÷ RPW`,
             criteria: "2.0: レギュラー / 5.0: スター / 8.0: MVP",
             related: ["wraa", "uzr", "woba", "rpw"],
             aiMode: true,
             inputs: [
-                {id:'pa', label:'打席数'}, {id:'h', label:'安打'}, 
-                {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, 
-                {id:'bb', label:'四球'}, {id:'sb', label:'盗塁'}, {id:'cs', label:'盗塁死'},
+                {id:'pa', label:'打席数'}, {id:'ab', label:'打数'},
+                {id:'h', label:'安打'}, {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, 
+                {id:'bb', label:'四球'}, {id:'hbp', label:'死球'}, 
+                {id:'sf', label:'犠飛'}, {id:'sh', label:'犠打'},
+                {id:'sb', label:'盗塁'}, {id:'cs', label:'盗塁死'},
+                
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 {id:'pos', label:'守備位置', type:'select', options:{'dh':'DH', '1b':'一塁', 'lf':'左翼', 'rf':'右翼', '3b':'三塁', '2b':'二塁', 'cf':'中堅', 'ss':'遊撃', 'c':'捕手'}},
                 {id:'def', label:'守備評価', type:'select', options:{'0':'平均的 (0)', '5':'上手い (+5)', '10':'名手 (+10)', '15':'神 (+15)', '-5':'苦手 (-5)', '-10':'下手 (-10)'}},
+                
                 {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
+                {id:'lg_ab', label:'リーグ総打数', type:'number', advanced:true, default: DEFAULTS.LG_AB}, 
                 {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
                 {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
                 {id:'lg_2b', label:'リーグ総二塁打', type:'number', advanced:true, default: DEFAULTS.LG_2B},
                 {id:'lg_3b', label:'リーグ総三塁打', type:'number', advanced:true, default: DEFAULTS.LG_3B},
-                {id:'lg_hr', label:'リーグ総本塁打', type:'number', advanced:true, default: DEFAULTS.LG_HR}
+                {id:'lg_bb', label:'リーグ総四球', type:'number', advanced:true, default: DEFAULTS.LG_BB},
+                {id:'lg_hbp', label:'リーグ総死球', type:'number', advanced:true, default: DEFAULTS.LG_HBP},
+                {id:'lg_sf', label:'リーグ総犠飛', type:'number', advanced:true, default: DEFAULTS.LG_SF},
+                {id:'lg_sh', label:'リーグ総犠打', type:'number', advanced:true, default: DEFAULTS.LG_SH}
             ],
             calc: (d) => {
                 const C = calcDerived(d);
+                const est = estimateDetails(d);
+                const fr = C.fitting_ratio; // 補正係数
+
+                // 1. Calculate wOBA (Coefficients scaled by fitting_ratio)
+                const woba_denom = d.ab + d.bb - est.ibb + d.hbp + d.sf;
+
+                const woba_num = 
+                    (0.692 * fr) * (d.bb - est.ibb) +
+                    (0.73  * fr) * d.hbp +
+                    (0.966 * fr) * est.roe +
+                    (0.865 * fr) * est.s +
+                    (1.334 * fr) * d.d +
+                    (1.725 * fr) * d.t +
+                    (2.065 * fr) * d.hr;
+
+                const woba_val = woba_denom > 0 ? woba_num / woba_denom : 0;
                 
-                // 1. Calculate wOBA
-                const s = d.h - d.d - d.t - d.hr;
-                const woba_val = (0.69*d.bb + 0.89*s + 1.27*d.d + 1.62*d.t + 2.10*d.hr) / d.pa;
-                
-                // 2. wRAA (Raw)
+                // 2. wRAA
                 const raw_wRAA = ((woba_val - C.lg_woba) / C.woba_scale) * d.pa;
 
-                // 3. Park Adj (Updated Formula: 6-team league model)
+                // 3. Park Adj
                 const pf = PARK_FACTORS[d.stadium].pf;
-                // 補正係数 = (本拠地試合割合 × PF) + (敵地試合割合 × (6 - PF) / 5)
                 const home_ratio = 0.5;
                 const pf_coef = (home_ratio * pf) + ((1 - home_ratio) * (6 - pf) / 5);
-                
-                // 補正値 = (1 - 補正係数) × リーグ平均R/PA × 打席
                 const parkAdj = (1 - pf_coef) * C.lg_r_pa * d.pa;
                 
                 const battingRuns = raw_wRAA + parkAdj;
@@ -660,7 +736,6 @@
                 
                 // 5. UZR & BaseRunning
                 const uzr = parseFloat(d.def) || 0;
-                // wSB概算: 盗塁(+0.2) - 盗塁死(-0.4)
                 const baseRunning = (d.sb * 0.2) - (d.cs * 0.4);
                 
                 // 6. Replacement Level
@@ -680,36 +755,50 @@
             related: ["woba", "wraa"],
             aiMode: true,
             inputs: [
-                {id:'pa', label:'打席数'}, {id:'h', label:'安打'}, 
-                {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, 
-                {id:'bb', label:'四球'},
+                {id:'pa', label:'打席数'}, {id:'ab', label:'打数'},
+                {id:'h', label:'安打'}, {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, 
+                {id:'bb', label:'四球'}, {id:'hbp', label:'死球'}, 
+                {id:'sf', label:'犠飛'}, {id:'sh', label:'犠打'},
+
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
+                {id:'lg_ab', label:'リーグ総打数', type:'number', advanced:true, default: DEFAULTS.LG_AB}, 
                 {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
                 {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
                 {id:'lg_2b', label:'リーグ総二塁打', type:'number', advanced:true, default: DEFAULTS.LG_2B},
                 {id:'lg_3b', label:'リーグ総三塁打', type:'number', advanced:true, default: DEFAULTS.LG_3B},
-                {id:'lg_hr', label:'リーグ総本塁打', type:'number', advanced:true, default: DEFAULTS.LG_HR}
+                {id:'lg_bb', label:'リーグ総四球', type:'number', advanced:true, default: DEFAULTS.LG_BB},
+                {id:'lg_hbp', label:'リーグ総死球', type:'number', advanced:true, default: DEFAULTS.LG_HBP},
+                {id:'lg_sf', label:'リーグ総犠飛', type:'number', advanced:true, default: DEFAULTS.LG_SF},
+                {id:'lg_sh', label:'リーグ総犠打', type:'number', advanced:true, default: DEFAULTS.LG_SH}
             ],
             calc: (d) => {
                 const C = calcDerived(d);
+                const est = estimateDetails(d);
+                const fr = C.fitting_ratio;
                 const pf = PARK_FACTORS[d.stadium].pf;
                 
                 // wOBA
-                const s = d.h - d.d - d.t - d.hr;
-                const woba_val = (0.69*d.bb + 0.89*s + 1.27*d.d + 1.62*d.t + 2.10*d.hr) / d.pa;
+                const woba_denom = d.ab + d.bb - est.ibb + d.hbp + d.sf;
+                const woba_num = 
+                    (0.692 * fr) * (d.bb - est.ibb) +
+                    (0.73  * fr) * d.hbp +
+                    (0.966 * fr) * est.roe +
+                    (0.865 * fr) * est.s +
+                    (1.334 * fr) * d.d +
+                    (1.725 * fr) * d.t +
+                    (2.065 * fr) * d.hr;
+                const woba_val = woba_denom > 0 ? woba_num / woba_denom : 0;
                 
-                // wRAA (Raw)
+                // wRAA
                 const raw_wraa = ((woba_val - C.lg_woba) / C.woba_scale) * d.pa;
                 
-                // Park Adj (New Formula)
+                // Park Adj
                 const home_ratio = 0.5;
                 const pf_coef = (home_ratio * pf) + ((1 - home_ratio) * (6 - pf) / 5);
                 const parkAdj = (1 - pf_coef) * C.lg_r_pa * d.pa;
 
                 // wRC+ Calc
-                // Numerator = (wRAA + ParkAdj) / PA + R/PA
-                // Denominator = R/PA
                 const wrc_plus_val = (((raw_wraa + parkAdj) / d.pa) + C.lg_r_pa) / C.lg_r_pa * 100;
                 
                 return wrc_plus_val.toFixed(0);
@@ -727,10 +816,18 @@
                 {id:'ip', label:'投球回'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, {id:'hr', label:'被本塁打'},
                 {id:'role', label:'役割', type:'select', options:{'sp':'先発', 'rp':'救援'}},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
+                
+                // 詳細設定を野手WARと統一
                 {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
+                {id:'lg_ab', label:'リーグ総打数', type:'number', advanced:true, default: DEFAULTS.LG_AB}, 
                 {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
                 {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
-                {id:'lg_hr', label:'リーグ総本塁打', type:'number', advanced:true, default: DEFAULTS.LG_HR}
+                {id:'lg_2b', label:'リーグ総二塁打', type:'number', advanced:true, default: DEFAULTS.LG_2B},
+                {id:'lg_3b', label:'リーグ総三塁打', type:'number', advanced:true, default: DEFAULTS.LG_3B},
+                {id:'lg_bb', label:'リーグ総四球', type:'number', advanced:true, default: DEFAULTS.LG_BB},
+                {id:'lg_hbp', label:'リーグ総死球', type:'number', advanced:true, default: DEFAULTS.LG_HBP},
+                {id:'lg_sf', label:'リーグ総犠飛', type:'number', advanced:true, default: DEFAULTS.LG_SF},
+                {id:'lg_sh', label:'リーグ総犠打', type:'number', advanced:true, default: DEFAULTS.LG_SH}
             ],
             calc: (d) => {
                 const C = calcDerived(d);
@@ -864,12 +961,39 @@
             criteria: ".320: 平均 / .400: MVP級",
             related: ["ops", "wrc_plus"],
             inputs: [
-                {id:'bb', label:'四球'}, {id:'hbp', label:'死球'}, {id:'s', label:'単打'}, 
-                {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, {id:'pa', label:'打席'}
+                {id:'pa', label:'打席'}, {id:'ab', label:'打数'},
+                {id:'s', label:'単打'}, {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, 
+                {id:'bb', label:'四球'}, {id:'hbp', label:'死球', default:0}, 
+                {id:'sf', label:'犠飛', default:0}, {id:'sh', label:'犠打', default:0},
+
+                // 詳細入力へ変更
+                {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
+                {id:'lg_ab', label:'リーグ総打数', type:'number', advanced:true, default: DEFAULTS.LG_AB}, 
+                {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
+                {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
+                {id:'lg_2b', label:'リーグ総二塁打', type:'number', advanced:true, default: DEFAULTS.LG_2B},
+                {id:'lg_3b', label:'リーグ総三塁打', type:'number', advanced:true, default: DEFAULTS.LG_3B},
+                {id:'lg_bb', label:'リーグ総四球', type:'number', advanced:true, default: DEFAULTS.LG_BB},
+                {id:'lg_hbp', label:'リーグ総死球', type:'number', advanced:true, default: DEFAULTS.LG_HBP},
+                {id:'lg_sf', label:'リーグ総犠飛', type:'number', advanced:true, default: DEFAULTS.LG_SF},
+                {id:'lg_sh', label:'リーグ総犠打', type:'number', advanced:true, default: DEFAULTS.LG_SH}
             ],
             calc: (d) => {
-                const num = 0.69*d.bb + 0.72*d.hbp + 0.89*d.s + 1.27*d.d + 1.62*d.t + 2.10*d.hr;
-                return (num / d.pa).toFixed(3).replace(/^0/,'');
+                const C = calcDerived(d);
+                const est = estimateDetails(d);
+                const fr = C.fitting_ratio;
+                
+                const woba_denom = d.ab + d.bb - est.ibb + d.hbp + d.sf;
+                const woba_num = 
+                    (0.692 * fr) * (d.bb - est.ibb) +
+                    (0.73  * fr) * d.hbp +
+                    (0.966 * fr) * est.roe +
+                    (0.865 * fr) * d.s + 
+                    (1.334 * fr) * d.d +
+                    (1.725 * fr) * d.t +
+                    (2.065 * fr) * d.hr;
+                    
+                return woba_denom > 0 ? (woba_num / woba_denom).toFixed(3).replace(/^0/,'') : "---";
             }
         },
         {
