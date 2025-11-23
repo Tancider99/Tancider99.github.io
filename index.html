@@ -4018,8 +4018,8 @@
 <style>
     /* --- Settings & Variables --- */
     :root {
-        --g-node-size: 85px;
-        --g-focus-size: 300px;
+        --g-node-size: 85px;         /* 通常時のノードサイズ */
+        --g-focus-size: 300px;       /* フォーカス時のサイズ */
         --g-font-size: 0.8rem;
     }
     @media (max-width: 768px) {
@@ -4028,6 +4028,7 @@
             --g-focus-size: 260px;
             --g-font-size: 0.65rem;
         }
+        /* モバイル用軽量化スタイル */
         .g-node {
             box-shadow: none !important;
             border: 1px solid rgba(255,255,255,0.3) !important;
@@ -4134,12 +4135,10 @@
     .gf-full { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; margin-bottom: 10px; color: #cbd5e1; }
     .gf-desc { font-size: 0.8rem; line-height: 1.4; color: #cbd5e1; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
     
-    /* ボタンのスタイル修正: ポインターイベントを確実に有効化 */
     .gf-btn { 
-        padding: 8px 24px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.4); 
+        padding: 8px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); 
         background: rgba(255,255,255,0.15); color: white; cursor: pointer; 
-        font-size: 0.85rem; font-weight: bold; pointer-events: auto; 
-        z-index: 200; position: relative;
+        font-size: 0.8rem; font-weight: bold; pointer-events: auto; z-index: 200; position: relative;
     }
     .gf-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.3); }
 
@@ -4196,7 +4195,12 @@
 
     let isInitialized = false;
     let nodesData = [];
-    let viewState = { scale: 0.35, panX: 0, panY: 0, isDragging: false, lastX: 0, lastY: 0, isPinching: false, pinchStartDist: 0, pinchStartScale: 1 };
+    let viewState = { 
+        scale: 0.35, panX: 0, panY: 0, 
+        isDragging: false, lastX: 0, lastY: 0, 
+        isPinching: false, pinchStartDist: 0, pinchStartScale: 1,
+        suppressClick: false // ピンチ後のクリック誤爆防止フラグ
+    };
     const MAX_SCALE = 1.2; const MIN_SCALE = 0.35;
 
     const CATEGORY_CENTERS = { 'tot': { x: 0, y: 0 }, 'std': { x: 0, y: -450 }, 'bat': { x: 800, y: 0 }, 'pit': { x: -800, y: 0 }, 'fld': { x: 0, y: 650 } };
@@ -4297,23 +4301,16 @@
             </div>
         `;
 
-        // 【修正ポイント】ボタンクリックを判定し、拡大処理をブロックする
-        const handleTap = (e) => {
-            // もしクリックされた要素がボタン(.gf-btn)なら、親の拡大処理はしない
-            if (e.target.closest('.gf-btn')) {
-                return; // ボタンのonClickに任せる
-            }
-
-            if(viewState.isDragging) return;
-            e.stopPropagation();
-            // ボタン以外の場合のみ、デフォルト動作（ダブルタップズームなど）を防ぐ
-            if(e.type === 'touchend') e.preventDefault();
+        // Click Handling with Suppress Check
+        el.onclick = (e) => {
+            if (e.target.closest('.gf-btn')) return; // Button handled by inline onclick
+            // ドラッグ中またはピンチ直後はクリックを無視
+            if (viewState.isDragging || viewState.suppressClick) return; 
             
+            e.stopPropagation();
             activateNode(node);
         };
         
-        el.onclick = handleTap;
-        el.ontouchend = handleTap;
         gNodesContainer.appendChild(el);
     }
 
@@ -4349,9 +4346,8 @@
         document.querySelectorAll('.g-line').forEach(el => el.classList.remove('is-related', 'is-dimmed'));
     }
 
-    // Background Click to Unfocus
     gOverlay.addEventListener('click', (e) => {
-        if(viewState.isDragging) return;
+        if(viewState.isDragging || viewState.suppressClick) return;
         if(e.target.closest('.g-node') || e.target.closest('.galaxy-controls')) return;
         resetFocus();
     });
@@ -4367,10 +4363,12 @@
     function closeMindMap() { gOverlay.classList.remove('active'); resetFocus(); }
     
     function updateTransform() { gUniverse.style.transform = `translate(${viewState.panX}px, ${viewState.panY}px) scale(${viewState.scale})`; }
+    
     function fitToScreen() {
         viewState.panX = 0; viewState.panY = 0;
         const minDim = Math.min(window.innerWidth, window.innerHeight);
-        viewState.scale = Math.max(minDim / 2400, MIN_SCALE);
+        // デフォルト倍率を上げる (分母を小さくする: 2400 -> 1500)
+        viewState.scale = Math.max(minDim / 1500, MIN_SCALE);
         gUniverse.style.transition = 'transform 0.6s ease';
         updateTransform();
         setTimeout(() => { gUniverse.style.transition = 'none'; }, 600);
@@ -4404,6 +4402,7 @@
         if(e.touches.length===2){ viewState.isPinching=true; viewState.pinchStartDist=getDistance(e.touches); viewState.pinchStartScale=viewState.scale; }
         else if(e.touches.length===1){ viewState.isPinching=false; handleStart(e.touches[0].clientX, e.touches[0].clientY); }
     }, {passive:false});
+    
     window.addEventListener('touchmove', (e) => {
         if(e.touches.length===2 && viewState.isPinching){
             const dist = getDistance(e.touches); const scaleChange = dist/viewState.pinchStartDist;
@@ -4411,7 +4410,18 @@
             gUniverse.style.transition='none'; updateTransform(); e.preventDefault();
         } else if(e.touches.length===1 && !viewState.isPinching) handleMove(e.touches[0].clientX, e.touches[0].clientY);
     }, {passive:false});
-    window.addEventListener('touchend', (e) => { if(e.touches.length<2) viewState.isPinching=false; setTimeout(()=>viewState.isDragging=false, 50); });
+    
+    window.addEventListener('touchend', (e) => {
+        if(e.touches.length < 2) {
+            // ピンチ終了直後はフラグを立ててクリックを防止
+            if (viewState.isPinching) {
+                viewState.suppressClick = true;
+                setTimeout(() => { viewState.suppressClick = false; }, 300);
+            }
+            viewState.isPinching = false;
+        }
+        setTimeout(()=>viewState.isDragging=false, 50);
+    });
 
     function initStars() {
         const starfield = document.getElementById('starfield');
