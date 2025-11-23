@@ -858,6 +858,12 @@
             <button class="preset-btn btn-del" onclick="openBatchCalc('pit')" style="font-size:0.9rem; padding:10px 20px; background:#f43f5e;">投手一括計算</button>
         </div>
 
+        <div style="display:flex; justify-content:center; margin-bottom:15px;">
+            <button class="preset-btn" onclick="openMindMap()" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 12px 30px; font-size: 1rem; border-radius: 50px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4); border: 1px solid rgba(255,255,255,0.2);">
+                <span style="margin-right:8px;">🌌</span> 指標探索 (Galaxy View)
+            </button>
+        </div>
+
         <div class="filter-scroll">
             <div class="filter-chip active" onclick="filterCategory('all')" data-cat="all">ALL</div>
             <div class="filter-chip" onclick="filterCategory('std')" data-cat="std">基本</div>
@@ -3957,6 +3963,336 @@
     // Initial Render
     render();
 
+</script>
+<style>
+    /* Galaxy View Overlay */
+    #galaxy-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+        z-index: 9999;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.5s ease;
+        overflow: hidden;
+        perspective: 1000px;
+    }
+    #galaxy-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+    
+    /* Background Particles */
+    .star {
+        position: absolute;
+        background: white;
+        border-radius: 50%;
+        opacity: 0.2;
+        animation: twinkle var(--duration) ease-in-out infinite;
+    }
+    @keyframes twinkle { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.8; } }
+
+    /* Graph Container */
+    #galaxy-container {
+        position: absolute;
+        top: 50%; left: 50%;
+        width: 0; height: 0;
+        transform-style: preserve-3d;
+    }
+
+    /* Node Styles */
+    .g-node {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+        box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        border: 2px solid rgba(255,255,255,0.1);
+        backdrop-filter: blur(4px);
+        user-select: none;
+    }
+    .g-node:hover {
+        z-index: 100;
+        transform: translate(-50%, -50%) scale(1.1);
+        box-shadow: 0 0 30px rgba(255,255,255,0.2);
+    }
+    
+    /* Center Node */
+    .g-node.center {
+        width: 160px; height: 160px;
+        background: rgba(14, 165, 233, 0.15);
+        border-color: #0ea5e9;
+        box-shadow: 0 0 50px rgba(14, 165, 233, 0.3);
+        font-size: 1.2rem;
+        font-weight: 900;
+        color: white;
+        z-index: 50;
+    }
+    
+    /* Satellite Nodes */
+    .g-node.satellite {
+        width: 100px; height: 100px;
+        background: rgba(255,255,255,0.05);
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #cbd5e1;
+    }
+    .g-node.satellite:hover {
+        background: rgba(255,255,255,0.15);
+        border-color: white;
+        color: white;
+    }
+
+    /* Lines (SVG) */
+    #galaxy-lines {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        pointer-events: none;
+        z-index: 1;
+    }
+    .g-line {
+        stroke: rgba(255,255,255,0.1);
+        stroke-width: 1.5;
+        transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+    }
+
+    /* UI Controls */
+    .galaxy-controls {
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 15px;
+        z-index: 1000;
+    }
+    .g-btn {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 30px;
+        cursor: pointer;
+        transition: 0.2s;
+        backdrop-filter: blur(5px);
+        font-weight: 700;
+    }
+    .g-btn:hover { background: rgba(255,255,255,0.25); }
+    .g-btn.close { background: rgba(244, 63, 94, 0.2); border-color: rgba(244, 63, 94, 0.5); }
+
+    /* Category Colors */
+    .g-cat-bat { border-color: #0ea5e9 !important; color: #e0f2fe !important; }
+    .g-cat-pit { border-color: #f43f5e !important; color: #ffe4e6 !important; }
+    .g-cat-fld { border-color: #d97706 !important; color: #fef3c7 !important; }
+    .g-cat-tot { border-color: #10b981 !important; color: #d1fae5 !important; }
+
+    .g-sub { font-size: 0.6em; opacity: 0.7; font-weight: 400; margin-top: 4px; }
+</style>
+
+<div id="galaxy-overlay">
+    <div id="starfield"></div>
+    
+    <svg id="galaxy-lines" style="width:100vw; height:100vh; position:absolute; top:0; left:0;"></svg>
+    
+    <div id="galaxy-container"></div>
+
+    <div class="galaxy-controls">
+        <button class="g-btn" onclick="resetGalaxy()">🏠 ホーム (WAR)</button>
+        <button class="g-btn" onclick="randomJump()">🎲 ランダムジャンプ</button>
+        <button class="g-btn close" onclick="closeMindMap()">× 閉じる</button>
+    </div>
+</div>
+
+<script>
+    // --- Galaxy Explorer Logic ---
+    const gOverlay = document.getElementById('galaxy-overlay');
+    const gContainer = document.getElementById('galaxy-container');
+    const gLines = document.getElementById('galaxy-lines');
+    
+    // Graph Data Structure
+    let graphNodes = {}; // id -> {data, related:[]}
+    let currentCenterId = null;
+
+    // Initialize Graph Data
+    function initGraphData() {
+        // Build nodes map
+        terms.forEach(t => {
+            graphNodes[t.id] = { ...t, links: new Set() };
+        });
+        
+        // Build bidirectional links
+        terms.forEach(t => {
+            if (t.related) {
+                t.related.forEach(rid => {
+                    if (graphNodes[rid]) {
+                        graphNodes[t.id].links.add(rid);
+                        graphNodes[rid].links.add(t.id);
+                    }
+                });
+            }
+            // Category linking (Implicit relation)
+            terms.forEach(other => {
+                if (t.id !== other.id && t.category === other.category && Math.random() > 0.95) {
+                     // Add occasional random links within same category for discovery
+                     // graphNodes[t.id].links.add(other.id); 
+                     // graphNodes[other.id].links.add(t.id);
+                }
+            });
+        });
+    }
+
+    function openMindMap(startId = 'war') {
+        if (Object.keys(graphNodes).length === 0) initGraphData();
+        gOverlay.classList.add('active');
+        generateStars();
+        focusNode(startId);
+    }
+
+    function closeMindMap() {
+        gOverlay.classList.remove('active');
+        setTimeout(() => {
+            gContainer.innerHTML = '';
+            gLines.innerHTML = '';
+        }, 500);
+    }
+
+    function resetGalaxy() {
+        focusNode('war');
+    }
+
+    function randomJump() {
+        const keys = Object.keys(graphNodes);
+        const rnd = keys[Math.floor(Math.random() * keys.length)];
+        focusNode(rnd);
+    }
+
+    function focusNode(centerId) {
+        if (!graphNodes[centerId]) return;
+        currentCenterId = centerId;
+
+        // Clear previous
+        gContainer.innerHTML = '';
+        gLines.innerHTML = '';
+
+        const centerData = graphNodes[centerId];
+        const neighbors = Array.from(centerData.links);
+        
+        // Determine positions
+        // Center
+        createNodeEl(centerData, 0, 0, 'center');
+
+        // Satellites (Orbit)
+        const radius = 280; // Distance from center
+        const angleStep = (2 * Math.PI) / (neighbors.length || 1);
+
+        neighbors.forEach((nid, index) => {
+            const nodeData = graphNodes[nid];
+            if (!nodeData) return;
+            
+            const angle = index * angleStep - (Math.PI / 2); // Start from top
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+            
+            createNodeEl(nodeData, x, y, 'satellite');
+            drawConnection(0, 0, x, y);
+        });
+        
+        // Update Info Title (optional overlay)
+    }
+
+    function createNodeEl(data, x, y, type) {
+        const el = document.createElement('div');
+        el.className = `g-node ${type} cat-${data.category}`;
+        
+        // Apply Category Specific Styles
+        if (data.category === 'bat') el.classList.add('g-cat-bat');
+        if (data.category === 'pit') el.classList.add('g-cat-pit');
+        if (data.category === 'fld') el.classList.add('g-cat-fld');
+        if (data.category === 'tot') el.classList.add('g-cat-tot');
+
+        // Position
+        // We use style left/top with calc to center in the container which is at 50% 50% of screen
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+
+        // Content
+        el.innerHTML = `
+            <div>${data.title}</div>
+            ${type === 'center' ? `<div class="g-sub">${data.full}</div>` : ''}
+        `;
+
+        // Animation Delay
+        el.style.opacity = '0';
+        el.style.transform = `translate(-50%, -50%) scale(0)`;
+        
+        setTimeout(() => {
+            el.style.opacity = '1';
+            el.style.transform = `translate(-50%, -50%) scale(1)`;
+        }, Math.random() * 200);
+
+        // Interaction
+        el.onclick = (e) => {
+            e.stopPropagation();
+            if (type === 'satellite') {
+                focusNode(data.id); // Move to this node
+            } else {
+                // If center clicked, open detail modal
+                closeMindMap();
+                openModal(data.id);
+            }
+        };
+
+        gContainer.appendChild(el);
+    }
+
+    function drawConnection(x1, y1, x2, y2) {
+        // Convert relative coords to screen SVG coords
+        // Container is at center of screen (window.innerWidth/2, window.innerHeight/2)
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', cx + x1);
+        line.setAttribute('y1', cy + y1);
+        line.setAttribute('x2', cx + x2);
+        line.setAttribute('y2', cy + y2);
+        line.setAttribute('class', 'g-line');
+        
+        gLines.appendChild(line);
+    }
+
+    function generateStars() {
+        const starfield = document.getElementById('starfield');
+        starfield.innerHTML = '';
+        for(let i=0; i<50; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            const xy = Math.random() * 100;
+            const size = Math.random() * 3 + 1;
+            const dur = Math.random() * 3 + 2;
+            
+            star.style.left = `${Math.random() * 100}%`;
+            star.style.top = `${Math.random() * 100}%`;
+            star.style.width = `${size}px`;
+            star.style.height = `${size}px`;
+            star.style.setProperty('--duration', `${dur}s`);
+            
+            starfield.appendChild(star);
+        }
+    }
+    
+    // Handle resize for SVG lines
+    window.addEventListener('resize', () => {
+        if (gOverlay.classList.contains('active') && currentCenterId) {
+            focusNode(currentCenterId);
+        }
+    });
 </script>
 </body>
 </html>
