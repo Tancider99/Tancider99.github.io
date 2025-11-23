@@ -4018,15 +4018,25 @@
 <style>
     /* --- Settings & Variables --- */
     :root {
-        --g-node-size: 85px;         /* 通常時のノードサイズ */
-        --g-focus-size: 300px;       /* フォーカス時のサイズ */
+        --g-node-size: 85px;
+        --g-focus-size: 300px;
         --g-font-size: 0.8rem;
     }
     @media (max-width: 768px) {
         :root {
             --g-node-size: 65px;
-            --g-focus-size: 260px; /* モバイルでも少し大きめに */
+            --g-focus-size: 260px;
             --g-font-size: 0.65rem;
+        }
+        /* 【超軽量化】モバイルでは通常時の重いエフェクト（影）をカット */
+        .g-node {
+            box-shadow: none !important;
+            border: 1px solid rgba(255,255,255,0.3) !important;
+            background: rgba(30, 41, 59, 0.95) !important; /* 透過を減らして描画負荷軽減 */
+        }
+        /* フォーカス時のみ最低限の影をつける */
+        .g-node.is-focused {
+            box-shadow: 0 0 30px rgba(0,0,0,0.5) !important;
         }
     }
 
@@ -4036,7 +4046,7 @@
         background: radial-gradient(ellipse at center, #1e293b 0%, #020617 100%);
         z-index: 9999;
         display: none; opacity: 0;
-        transition: opacity 0.5s ease;
+        transition: opacity 0.4s ease; /* アニメーション時間短縮 */
         overflow: hidden;
         cursor: grab;
         touch-action: none;
@@ -4049,7 +4059,7 @@
     /* Stars */
     .star {
         position: absolute; background: white; border-radius: 50%;
-        opacity: 0.6; pointer-events: none;
+        opacity: 0.6; pointer-events: none; will-change: opacity;
     }
 
     /* --- Universe Wrapper --- */
@@ -4070,146 +4080,97 @@
         border-radius: 50%;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-align: center; cursor: pointer;
-        /* モバイル負荷軽減のため backdrop-filter は削除 */
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        box-shadow: 0 0 10px rgba(0,0,0,0.3), inset 0 0 10px rgba(255,255,255,0.05);
+        /* プロパティを限定して軽量化 */
+        transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.3s;
+        box-shadow: 0 0 15px rgba(0,0,0,0.3), inset 0 0 10px rgba(255,255,255,0.05);
         border: 1px solid rgba(255,255,255,0.2);
         z-index: 10;
-        background: rgba(30, 41, 59, 0.9); /* 少し濃いめにして視認性確保 */
+        background: rgba(30, 41, 59, 0.85);
         color: #94a3b8;
         font-weight: 700;
         font-size: var(--g-font-size);
         touch-action: none;
     }
 
-    /* Hover effect (Desktop only) */
     @media (hover: hover) {
         .g-node:hover {
             z-index: 50;
             border-color: white; color: white;
-            box-shadow: 0 0 20px rgba(255,255,255,0.3);
+            box-shadow: 0 0 25px rgba(255,255,255,0.25);
             transform: translate(-50%, -50%) scale(1.15);
         }
     }
 
-    /* State: Dimmed */
-    .g-node.is-dimmed {
-        opacity: 0.15;
-        transform: translate(-50%, -50%) scale(0.8);
-        pointer-events: none;
-    }
-
-    /* State: Related */
+    .g-node.is-dimmed { opacity: 0.1; transform: translate(-50%, -50%) scale(0.8); pointer-events: none; }
+    
     .g-node.is-related {
         opacity: 1;
-        border-color: rgba(255,255,255,0.8);
-        box-shadow: 0 0 15px rgba(255,255,255,0.2);
+        border-color: rgba(255,255,255,0.9);
         z-index: 40;
     }
+    /* モバイル以外では関連ノードも光らせる */
+    @media (min-width: 769px) {
+        .g-node.is-related { box-shadow: 0 0 20px rgba(255,255,255,0.15); }
+    }
 
-    /* --- State: Focused (Detail View) --- */
     .g-node.is-focused {
         width: var(--g-focus-size); height: var(--g-focus-size);
         z-index: 100;
-        background: rgba(15, 23, 42, 0.95); /* 不透明度を上げて重なりを防ぐ */
-        border: 2px solid rgba(255,255,255,0.6);
-        box-shadow: 0 0 60px rgba(0,0,0,0.5);
+        background: rgba(15, 23, 42, 0.98) !important;
+        border: 2px solid rgba(255,255,255,0.6) !important;
+        /* Shadow defined in media query */
         transform: translate(-50%, -50%) scale(1) !important;
         cursor: default;
     }
     
-    /* Content Switching */
-    .g-content-normal {
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        width: 100%; height: 100%;
-        opacity: 1; transition: opacity 0.2s;
-    }
-    .g-node.is-focused .g-content-normal {
-        display: none; opacity: 0;
-    }
+    .g-content-normal { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; transition: opacity 0.2s; }
+    .g-node.is-focused .g-content-normal { display: none; opacity: 0; }
 
     .g-content-focus {
-        display: none; opacity: 0;
-        width: 100%; height: 100%;
+        display: none; opacity: 0; width: 100%; height: 100%;
         flex-direction: column; align-items: center; justify-content: center;
         padding: 20px; box-sizing: border-box;
     }
-    .g-node.is-focused .g-content-focus {
-        display: flex; opacity: 1;
-        animation: fadeIn 0.4s ease forwards;
-    }
+    .g-node.is-focused .g-content-focus { display: flex; opacity: 1; animation: fadeIn 0.3s ease forwards; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* Focus Content Styles */
     .gf-icon svg { width: 40px; height: 40px; margin-bottom: 8px; opacity: 1; }
     .gf-title { font-size: 1.6rem; font-weight: 900; line-height: 1.1; margin-bottom: 4px; color: white; }
     .gf-full { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; margin-bottom: 10px; color: #cbd5e1; }
-    .gf-desc { 
-        font-size: 0.8rem; line-height: 1.4; color: #cbd5e1; margin-bottom: 15px; 
-        display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; 
-        white-space: normal;
-    }
+    .gf-desc { font-size: 0.8rem; line-height: 1.4; color: #cbd5e1; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
     .gf-btn { 
         padding: 8px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); 
-        background: rgba(255,255,255,0.15); color: white; cursor: pointer; transition: 0.2s; 
+        background: rgba(255,255,255,0.15); color: white; cursor: pointer; 
         font-size: 0.8rem; font-weight: bold; pointer-events: auto;
     }
-    .gf-btn:hover { background: rgba(255,255,255,0.3); }
-
-    @media (max-width: 768px) {
-        .gf-title { font-size: 1.4rem; }
-        .gf-desc { font-size: 0.75rem; -webkit-line-clamp: 4; }
-    }
-    
+    @media (max-width: 768px) { .gf-title { font-size: 1.4rem; } .gf-desc { font-size: 0.75rem; -webkit-line-clamp: 4; } }
     .g-node .icon-normal svg { width: 28px; height: 28px; margin-bottom: 4px; opacity: 0.8; }
     
     /* --- Lines --- */
-    #galaxy-lines { 
-        position: absolute; top: -5000px; left: -5000px; width: 10000px; height: 10000px;
-        pointer-events: none; z-index: 1; overflow: visible;
-    }
-    .g-line {
-        stroke: rgba(255,255,255,0.1); stroke-width: 1.5; transition: stroke 0.3s, opacity 0.3s;
-    }
+    #galaxy-lines { position: absolute; top: -5000px; left: -5000px; width: 10000px; height: 10000px; pointer-events: none; z-index: 1; }
+    .g-line { stroke: rgba(255,255,255,0.1); stroke-width: 1.5; transition: opacity 0.3s; }
     .g-line.is-dimmed { opacity: 0.05; }
     .g-line.is-related { stroke: rgba(255,255,255,0.5); stroke-width: 2.0; opacity: 1; }
 
-    /* --- Category Colors --- */
-    .g-cat-bat { border-color: rgba(14, 165, 233, 0.4); }
-    .g-cat-bat.is-focused { border-color: #0ea5e9; text-shadow: 0 0 10px rgba(14, 165, 233, 0.8); }
-    .g-cat-bat .icon-normal { color: #0ea5e9; }
-    
-    .g-cat-pit { border-color: rgba(244, 63, 94, 0.4); }
-    .g-cat-pit.is-focused { border-color: #f43f5e; text-shadow: 0 0 10px rgba(244, 63, 94, 0.8); }
-    .g-cat-pit .icon-normal { color: #f43f5e; }
-    
-    .g-cat-fld { border-color: rgba(217, 119, 6, 0.4); }
-    .g-cat-fld.is-focused { border-color: #d97706; text-shadow: 0 0 10px rgba(217, 119, 6, 0.8); }
-    .g-cat-fld .icon-normal { color: #d97706; }
-    
-    .g-cat-tot { border-color: rgba(16, 185, 129, 0.4); }
-    .g-cat-tot.is-focused { border-color: #10b981; text-shadow: 0 0 10px rgba(16, 185, 129, 0.8); }
-    .g-cat-tot .icon-normal { color: #10b981; }
+    /* Category Colors */
+    .g-cat-bat { border-color: rgba(14, 165, 233, 0.4); } .g-cat-bat.is-focused { border-color: #0ea5e9; } .g-cat-bat .icon-normal { color: #0ea5e9; }
+    .g-cat-pit { border-color: rgba(244, 63, 94, 0.4); } .g-cat-pit.is-focused { border-color: #f43f5e; } .g-cat-pit .icon-normal { color: #f43f5e; }
+    .g-cat-fld { border-color: rgba(217, 119, 6, 0.4); } .g-cat-fld.is-focused { border-color: #d97706; } .g-cat-fld .icon-normal { color: #d97706; }
+    .g-cat-tot { border-color: rgba(16, 185, 129, 0.4); } .g-cat-tot.is-focused { border-color: #10b981; } .g-cat-tot .icon-normal { color: #10b981; }
 
-    /* --- Controls UI --- */
+    /* Controls */
     .galaxy-controls {
         position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
         display: flex; gap: 12px; z-index: 1000;
         padding: 8px 16px; border-radius: 40px;
-        background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.15);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15);
     }
     .g-btn {
-        background: transparent; border: none; color: rgba(255,255,255,0.8);
-        padding: 0; border-radius: 50%; cursor: pointer;
-        transition: 0.2s; display: flex; align-items: center; justify-content: center;
-        width: 44px; height: 44px; position: relative;
+        background: transparent; border: none; color: rgba(255,255,255,0.8); padding: 0; border-radius: 50%; cursor: pointer;
+        width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
     }
-    .g-btn:hover { background: rgba(255,255,255,0.2); color: white; transform: translateY(-2px); }
-    .g-btn:active { transform: scale(0.95); }
     .g-btn svg { width: 22px; height: 22px; stroke-width: 2; }
     .g-btn.close { color: #f43f5e; }
-    .g-btn.close:hover { background: rgba(244, 63, 94, 0.2); }
 </style>
 
 <div id="galaxy-overlay">
@@ -4219,9 +4180,9 @@
         <div id="galaxy-nodes"></div>
     </div>
     <div class="galaxy-controls">
-        <button class="g-btn" onclick="zoomIn()" title="拡大 (+)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg></button>
-        <button class="g-btn" onclick="zoomOut()" title="縮小 (-)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" x2="16" y1="12" y2="12"/></svg></button>
-        <button class="g-btn" onclick="fitToScreen()" title="全体表示"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+        <button class="g-btn" onclick="zoomIn()" title="拡大"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg></button>
+        <button class="g-btn" onclick="zoomOut()" title="縮小"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" x2="16" y1="12" y2="12"/></svg></button>
+        <button class="g-btn" onclick="fitToScreen()" title="リセット"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
         <div style="width:1px; height:24px; background:rgba(255,255,255,0.2); margin:auto 5px;"></div>
         <button class="g-btn close" onclick="closeMindMap()" title="閉じる"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     </div>
@@ -4235,30 +4196,18 @@
 
     let isInitialized = false;
     let nodesData = [];
-    
-    // View State
-    let viewState = { 
-        scale: 0.35, panX: 0, panY: 0, 
-        isDragging: false, 
-        lastX: 0, lastY: 0,
-        // Pinch Zoom
-        isPinching: false,
-        pinchStartDist: 0,
-        pinchStartScale: 1
+    let viewState = { scale: 0.35, panX: 0, panY: 0, isDragging: false, lastX: 0, lastY: 0, isPinching: false, pinchStartDist: 0, pinchStartScale: 1 };
+    const MAX_SCALE = 1.2; const MIN_SCALE = 0.35;
+
+    const CATEGORY_CENTERS = { 'tot': { x: 0, y: 0 }, 'std': { x: 0, y: -450 }, 'bat': { x: 800, y: 0 }, 'pit': { x: -800, y: 0 }, 'fld': { x: 0, y: 650 } };
+    // 関連性定義（補完用）
+    const extraRelations = {
+        'avg': ['obp', 'slg', 'ops', 'babip', 'woba'], 'obp': ['avg', 'slg', 'ops', 'bb_pct', 'isod', 'woba'], 'slg': ['avg', 'obp', 'ops', 'iso', 'hr_ab', 'woba'],
+        'ops': ['avg', 'obp', 'slg', 'woba', 'wrc_plus'], 'woba': ['ops', 'wrc_plus', 'wrc', 'wraa', 'xwoba'], 'wrc_plus': ['woba', 'wraa', 'war'],
+        'war': ['wraa', 'uzr', 'wsb', 'bsr', 'fip', 'pit_war'], 'bb_pct': ['k_pct', 'bb_k', 'isod'], 'k_pct': ['bb_pct', 'bb_k'],
+        'era': ['fip', 'xfip', 'siera', 'ra9'], 'fip': ['era', 'xfip', 'siera', 'k_pct_pit'], 'xfip': ['fip', 'siera', 'gb_pct'], 'siera': ['fip', 'xfip'],
+        'uzr': ['drs', 'oaa', 'rngr'], 'drs': ['uzr', 'oaa'], 'oaa': ['uzr', 'drs']
     };
-
-    // Zoom Constraints
-    const MAX_SCALE = 1.0; 
-    const MIN_SCALE = 0.35;
-
-    const CATEGORY_CENTERS = {
-        'tot': { x: 0, y: 0 },
-        'std': { x: 0, y: -450 },
-        'bat': { x: 800, y: 0 },
-        'pit': { x: -800, y: 0 },
-        'fld': { x: 0, y: 650 }
-    };
-
     const gIcons = {
         bat: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M2 17 17 2"/><path d="m2 2 20 20"/><path d="m19 2 2 2"/><path d="m2 19 2 2"/><path d="m10 2 2 2"/><path d="m2 10 2 2"/></svg>`,
         pit: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4"/><path d="M12 16V8"/></svg>`,
@@ -4269,35 +4218,37 @@
 
     function initGalaxy() {
         if (isInitialized) return;
-        
-        nodesData = terms.map((t) => {
+        terms.forEach(t => {
+            if(!t.related) t.related = [];
+            if(extraRelations[t.id]) extraRelations[t.id].forEach(rid => { if(!t.related.includes(rid)) t.related.push(rid); });
+        });
+        terms.forEach(t => {
+            t.related.forEach(rid => {
+                const target = terms.find(x => x.id === rid);
+                if(target && (!target.related || !target.related.includes(t.id))) {
+                    if(!target.related) target.related = []; target.related.push(t.id);
+                }
+            });
+        });
+
+        nodesData = terms.map(t => {
             const center = CATEGORY_CENTERS[t.category] || {x:0, y:0};
             const angle = Math.random() * Math.PI * 2;
             const dist = Math.random() * 320;
-            return {
-                ...t,
-                x: center.x + Math.cos(angle) * dist,
-                y: center.y + Math.sin(angle) * dist,
-                links: t.related || []
-            };
+            return { ...t, x: center.x + Math.cos(angle)*dist, y: center.y + Math.sin(angle)*dist, links: t.related||[] };
         });
 
-        // Collision Resolution
-        const NODE_RADIUS = 140; 
-        for (let k = 0; k < 50; k++) {
-            for (let i = 0; i < nodesData.length; i++) {
-                for (let j = i + 1; j < nodesData.length; j++) {
-                    const n1 = nodesData[i];
-                    const n2 = nodesData[j];
-                    const dx = n1.x - n2.x;
-                    const dy = n1.y - n2.y;
-                    const d = Math.sqrt(dx*dx + dy*dy);
-                    if (d < NODE_RADIUS) {
-                        const force = (NODE_RADIUS - d) / (d || 1) * 0.5;
-                        const mx = dx * force;
-                        const my = dy * force;
-                        n1.x += mx; n1.y += my;
-                        n2.x -= mx; n2.y -= my;
+        const NODE_RADIUS = 140;
+        for(let k=0; k<50; k++){
+            for(let i=0; i<nodesData.length; i++){
+                for(let j=i+1; j<nodesData.length; j++){
+                    const n1 = nodesData[i], n2 = nodesData[j];
+                    const dx = n1.x - n2.x, dy = n1.y - n2.y;
+                    const d = Math.sqrt(dx*dx+dy*dy);
+                    if(d < NODE_RADIUS){
+                        const f = (NODE_RADIUS - d)/(d||1)*0.5;
+                        const mx = dx*f, my = dy*f;
+                        n1.x+=mx; n1.y+=my; n2.x-=mx; n2.y-=my;
                     }
                 }
             }
@@ -4310,19 +4261,15 @@
     }
 
     function renderLines() {
-        const pairs = new Set();
-        let html = '';
+        const pairs = new Set(); let html = '';
         nodesData.forEach(source => {
-            if (!source.links) return;
+            if(!source.links) return;
             source.links.forEach(targetId => {
                 const target = nodesData.find(n => n.id === targetId);
-                if (target) {
+                if(target){
                     const pairId = [source.id, target.id].sort().join('-');
-                    if (!pairs.has(pairId)) {
-                        const x1 = 5000 + source.x;
-                        const y1 = 5000 + source.y;
-                        const x2 = 5000 + target.x;
-                        const y2 = 5000 + target.y;
+                    if(!pairs.has(pairId)){
+                        const x1=5000+source.x, y1=5000+source.y, x2=5000+target.x, y2=5000+target.y;
                         html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="g-line" data-src="${source.id}" data-tgt="${target.id}" />`;
                         pairs.add(pairId);
                     }
@@ -4338,15 +4285,10 @@
         el.id = `g-node-${node.id}`;
         el.style.left = `${node.x}px`;
         el.style.top = `${node.y}px`;
-
         const iconSvg = gIcons[node.category] || gIcons.std;
         
-        // Detailed Content Structure
         el.innerHTML = `
-            <div class="g-content-normal">
-                <div class="icon-normal">${iconSvg}</div>
-                <div>${node.title}</div>
-            </div>
+            <div class="g-content-normal"><div class="icon-normal">${iconSvg}</div><div>${node.title}</div></div>
             <div class="g-content-focus">
                 <div class="gf-icon">${iconSvg}</div>
                 <div class="gf-title">${node.title}</div>
@@ -4356,74 +4298,68 @@
             </div>
         `;
 
-        // Click Handling (Unified)
-        el.onclick = (e) => {
-            if (viewState.isDragging) return;
+        const handleTap = (e) => {
+            if(viewState.isDragging) return;
             e.stopPropagation();
+            if(e.type === 'touchend') e.preventDefault();
             activateNode(node);
         };
-
+        el.onclick = handleTap;
+        el.ontouchend = handleTap;
         gNodesContainer.appendChild(el);
     }
 
     function activateNode(node) {
-        // Reset previous
-        document.querySelectorAll('.g-node').forEach(el => el.classList.remove('is-focused', 'is-related', 'is-dimmed'));
-        document.querySelectorAll('.g-line').forEach(el => el.classList.remove('is-related', 'is-dimmed'));
-
+        resetFocus();
         const currentId = node.id;
         const relatedIds = node.links || [];
+        const extendedIds = new Set(relatedIds);
+        relatedIds.forEach(rid => {
+            const rNode = nodesData.find(n => n.id === rid);
+            if(rNode && rNode.links) rNode.links.forEach(rid2 => extendedIds.add(rid2));
+        });
 
         document.querySelectorAll('.g-node').forEach(el => {
             const elId = el.id.replace('g-node-', '');
-            if (elId === currentId) {
-                el.classList.add('is-focused');
-            } else if (relatedIds.includes(elId)) {
-                el.classList.add('is-related');
-            } else {
-                el.classList.add('is-dimmed');
-            }
+            if(elId === currentId) el.classList.add('is-focused');
+            else if(extendedIds.has(elId)) el.classList.add('is-related');
+            else el.classList.add('is-dimmed');
         });
 
         document.querySelectorAll('.g-line').forEach(line => {
-            const src = line.getAttribute('data-src');
-            const tgt = line.getAttribute('data-tgt');
-            if ( (src === currentId && relatedIds.includes(tgt)) || (tgt === currentId && relatedIds.includes(src)) ) {
-                line.classList.add('is-related');
-            } else {
-                line.classList.add('is-dimmed');
-            }
+            const src = line.getAttribute('data-src'), tgt = line.getAttribute('data-tgt');
+            if((src===currentId && relatedIds.includes(tgt)) || (tgt===currentId && relatedIds.includes(src))) line.classList.add('is-related');
+            else if(extendedIds.has(src) && extendedIds.has(tgt)) line.classList.add('is-dimmed'); // 2次関連は薄く
+            else line.classList.add('is-dimmed');
         });
 
         animateView(-node.x, -node.y, MAX_SCALE);
     }
 
-    function animateView(targetX, targetY, targetScale) {
-        gUniverse.style.transition = 'transform 0.6s cubic-bezier(0.19, 1, 0.22, 1)';
-        viewState.panX = targetX;
-        viewState.panY = targetY;
-        viewState.scale = targetScale;
-        updateTransform();
-        setTimeout(() => { gUniverse.style.transition = 'none'; }, 600);
-    }
-
-    function openMindMap() {
-        initGalaxy();
-        gOverlay.classList.add('active');
-        fitToScreen();
-    }
-
-    function closeMindMap() {
-        gOverlay.classList.remove('active');
-        // Reset states
+    function resetFocus() {
         document.querySelectorAll('.g-node').forEach(el => el.classList.remove('is-focused', 'is-related', 'is-dimmed'));
         document.querySelectorAll('.g-line').forEach(el => el.classList.remove('is-related', 'is-dimmed'));
     }
 
-    function updateTransform() {
-        gUniverse.style.transform = `translate(${viewState.panX}px, ${viewState.panY}px) scale(${viewState.scale})`;
+    // Background Click to Unfocus
+    gOverlay.addEventListener('click', (e) => {
+        if(viewState.isDragging) return;
+        // コントロールパネルやノード以外の場所（背景）をクリックした場合のみ解除
+        if(e.target.closest('.g-node') || e.target.closest('.galaxy-controls')) return;
+        resetFocus();
+    });
+
+    function animateView(targetX, targetY, targetScale) {
+        gUniverse.style.transition = 'transform 0.6s cubic-bezier(0.19, 1, 0.22, 1)';
+        viewState.panX = targetX; viewState.panY = targetY; viewState.scale = targetScale;
+        updateTransform();
+        setTimeout(() => { gUniverse.style.transition = 'none'; }, 600);
     }
 
+    function openMindMap() { initGalaxy(); gOverlay.classList.add('active'); fitToScreen(); }
+    function closeMindMap() { gOverlay.classList.remove('active'); resetFocus(); }
+    
+    function updateTransform() { gUniverse.style.transform = `translate(${viewState.panX}px, ${viewState.panY}px) scale(${viewState.scale})`; }
     function fitToScreen() {
         viewState.panX = 0; viewState.panY = 0;
         const minDim = Math.min(window.innerWidth, window.innerHeight);
@@ -4431,126 +4367,55 @@
         gUniverse.style.transition = 'transform 0.6s ease';
         updateTransform();
         setTimeout(() => { gUniverse.style.transition = 'none'; }, 600);
-        
-        document.querySelectorAll('.g-node').forEach(el => el.classList.remove('is-focused', 'is-related', 'is-dimmed'));
-        document.querySelectorAll('.g-line').forEach(el => el.classList.remove('is-related', 'is-dimmed'));
+        resetFocus();
     }
+    function zoomIn() { viewState.scale = Math.min(viewState.scale * 1.3, MAX_SCALE); gUniverse.style.transition = 'transform 0.3s ease'; updateTransform(); setTimeout(()=>gUniverse.style.transition='none',300); }
+    function zoomOut() { viewState.scale = Math.max(viewState.scale / 1.3, MIN_SCALE); gUniverse.style.transition = 'transform 0.3s ease'; updateTransform(); setTimeout(()=>gUniverse.style.transition='none',300); }
 
-    function zoomIn() {
-        viewState.scale = Math.min(viewState.scale * 1.3, MAX_SCALE);
-        gUniverse.style.transition = 'transform 0.3s ease';
-        updateTransform();
-        setTimeout(() => { gUniverse.style.transition = 'none'; }, 300);
-    }
-    function zoomOut() {
-        viewState.scale = Math.max(viewState.scale / 1.3, MIN_SCALE);
-        gUniverse.style.transition = 'transform 0.3s ease';
-        updateTransform();
-        setTimeout(() => { gUniverse.style.transition = 'none'; }, 300);
-    }
-
-    /* --- Input Handling --- */
-    
+    /* Input Handling */
     function getDistance(touches) {
-        const dx = touches[0].clientX - touches[1].clientX;
-        const dy = touches[0].clientY - touches[1].clientY;
-        return Math.sqrt(dx * dx + dy * dy);
+        const dx = touches[0].clientX - touches[1].clientX, dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx*dx + dy*dy);
     }
+    gOverlay.addEventListener('wheel', (e) => { e.preventDefault(); const delta = e.deltaY * -0.001; viewState.scale = Math.min(Math.max(MIN_SCALE, viewState.scale+delta), MAX_SCALE); gUniverse.style.transition = 'none'; updateTransform(); }, {passive:false});
 
-    gOverlay.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        const delta = e.deltaY * -0.001;
-        viewState.scale = Math.min(Math.max(MIN_SCALE, viewState.scale + delta), MAX_SCALE);
-        gUniverse.style.transition = 'none'; 
-        updateTransform();
-    }, {passive: false});
-
-    const handleStart = (x, y) => {
-        if (viewState.isPinching) return;
-        viewState.isDragging = false; 
-        viewState.lastX = x;
-        viewState.lastY = y;
-        gUniverse.style.transition = 'none'; 
-    };
-
+    const handleStart = (x, y) => { if(viewState.isPinching)return; viewState.isDragging = false; viewState.lastX = x; viewState.lastY = y; gUniverse.style.transition = 'none'; };
     const handleMove = (x, y) => {
-        if (viewState.isPinching) return;
-        
-        const dx = x - viewState.lastX;
-        const dy = y - viewState.lastY;
-
-        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
-            viewState.isDragging = true;
-        }
-
-        if (viewState.isDragging) {
-            viewState.panX += dx;
-            viewState.panY += dy;
-            updateTransform();
-        }
-        viewState.lastX = x;
-        viewState.lastY = y;
+        if(viewState.isPinching)return;
+        const dx = x - viewState.lastX, dy = y - viewState.lastY;
+        if(Math.abs(dx)>3 || Math.abs(dy)>3) viewState.isDragging = true;
+        if(viewState.isDragging){ viewState.panX += dx; viewState.panY += dy; updateTransform(); }
+        viewState.lastX = x; viewState.lastY = y;
     };
 
-    gOverlay.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.galaxy-controls')) return;
-        handleStart(e.clientX, e.clientY);
-        gOverlay.style.cursor = 'grabbing';
-    });
-    window.addEventListener('mousemove', (e) => {
-        if (gOverlay.style.cursor === 'grabbing') {
-            handleMove(e.clientX, e.clientY);
-        }
-    });
-    window.addEventListener('mouseup', () => {
-        gOverlay.style.cursor = 'grab';
-        setTimeout(() => { viewState.isDragging = false; }, 50);
-    });
+    gOverlay.addEventListener('mousedown', (e) => { if(e.target.closest('.galaxy-controls'))return; handleStart(e.clientX, e.clientY); gOverlay.style.cursor = 'grabbing'; });
+    window.addEventListener('mousemove', (e) => { if(gOverlay.style.cursor === 'grabbing') handleMove(e.clientX, e.clientY); });
+    window.addEventListener('mouseup', () => { gOverlay.style.cursor = 'grab'; setTimeout(()=>viewState.isDragging=false, 50); });
 
     gOverlay.addEventListener('touchstart', (e) => {
-        if (e.target.closest('.galaxy-controls')) return;
-        
-        if (e.touches.length === 2) {
-            viewState.isPinching = true;
-            viewState.pinchStartDist = getDistance(e.touches);
-            viewState.pinchStartScale = viewState.scale;
-        } else if (e.touches.length === 1) {
-            viewState.isPinching = false;
-            handleStart(e.touches[0].clientX, e.touches[0].clientY);
-        }
-    }, {passive: false});
-
+        if(e.target.closest('.galaxy-controls'))return;
+        if(e.touches.length===2){ viewState.isPinching=true; viewState.pinchStartDist=getDistance(e.touches); viewState.pinchStartScale=viewState.scale; }
+        else if(e.touches.length===1){ viewState.isPinching=false; handleStart(e.touches[0].clientX, e.touches[0].clientY); }
+    }, {passive:false});
     window.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 2 && viewState.isPinching) {
-            const dist = getDistance(e.touches);
-            const scaleChange = dist / viewState.pinchStartDist;
-            viewState.scale = Math.min(Math.max(MIN_SCALE, viewState.pinchStartScale * scaleChange), MAX_SCALE);
-            gUniverse.style.transition = 'none';
-            updateTransform();
-            e.preventDefault();
-        } else if (e.touches.length === 1 && !viewState.isPinching) {
-            handleMove(e.touches[0].clientX, e.touches[0].clientY);
-        }
-    }, {passive: false});
-
-    window.addEventListener('touchend', (e) => {
-        if (e.touches.length < 2) {
-            viewState.isPinching = false;
-        }
-        setTimeout(() => { viewState.isDragging = false; }, 50);
-    });
+        if(e.touches.length===2 && viewState.isPinching){
+            const dist = getDistance(e.touches); const scaleChange = dist/viewState.pinchStartDist;
+            viewState.scale = Math.min(Math.max(MIN_SCALE, viewState.pinchStartScale*scaleChange), MAX_SCALE);
+            gUniverse.style.transition='none'; updateTransform(); e.preventDefault();
+        } else if(e.touches.length===1 && !viewState.isPinching) handleMove(e.touches[0].clientX, e.touches[0].clientY);
+    }, {passive:false});
+    window.addEventListener('touchend', (e) => { if(e.touches.length<2) viewState.isPinching=false; setTimeout(()=>viewState.isDragging=false, 50); });
 
     function initStars() {
         const starfield = document.getElementById('starfield');
-        if (starfield.children.length > 0) return; 
-        for(let i=0; i<150; i++) {
-            const star = document.createElement('div');
-            star.className = 'star';
-            star.style.left = Math.random() * 100 + '%';
-            star.style.top = Math.random() * 100 + '%';
-            const size = Math.random() * 2 + 1;
-            star.style.width = size + 'px';
-            star.style.height = size + 'px';
+        if(starfield.children.length > 0) return;
+        // 超軽量化：モバイルなら星を激減させる
+        const isMobile = window.innerWidth < 768;
+        const starCount = isMobile ? 40 : 120; 
+        for(let i=0; i<starCount; i++){
+            const star = document.createElement('div'); star.className = 'star';
+            star.style.left = Math.random()*100+'%'; star.style.top = Math.random()*100+'%';
+            const size = Math.random()*2+1; star.style.width = size+'px'; star.style.height = size+'px';
             starfield.appendChild(star);
         }
     }
