@@ -4028,6 +4028,7 @@
             --g-focus-size: 260px;
             --g-font-size: 0.65rem;
         }
+        /* モバイル用軽量化 */
         .g-node {
             box-shadow: none !important;
             border: 1px solid rgba(255,255,255,0.3) !important;
@@ -4043,18 +4044,8 @@
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
         background: radial-gradient(ellipse at center, #1e293b 0%, #020617 100%);
         z-index: 9999;
-        
-        /* 初期状態（非表示） */
-        visibility: hidden;
-        opacity: 0;
-        transform: scale(1.1); /* 少し拡大した状態から */
-        
-        /* 画面切り替えアニメーション */
-        transition: 
-            opacity 0.5s cubic-bezier(0.25, 0.8, 0.25, 1),
-            transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1),
-            visibility 0.5s;
-            
+        display: none; opacity: 0;
+        transition: opacity 0.6s ease;
         overflow: hidden;
         cursor: grab;
         touch-action: none;
@@ -4062,20 +4053,17 @@
         -webkit-user-select: none;
         perspective: 1000px;
     }
-    
-    /* 表示状態（アクティブ） */
-    #galaxy-overlay.active { 
-        visibility: visible;
-        opacity: 1;
-        transform: scale(1); /* 通常サイズに戻る（ズームイン効果） */
-    }
-    
+    #galaxy-overlay.active { display: flex; opacity: 1; }
     #galaxy-overlay:active { cursor: grabbing; }
 
-    /* Stars (Simple) */
+    /* Stars */
     .star {
         position: absolute; background: white; border-radius: 50%;
-        opacity: 0.6; pointer-events: none;
+        opacity: 0.6; pointer-events: none; transition: opacity 0.5s;
+    }
+    /* 起動時：星は伸びずにフェードインのみ */
+    #galaxy-overlay.launching .star {
+        opacity: 1;
     }
 
     /* --- Universe Wrapper --- */
@@ -4085,17 +4073,26 @@
         backface-visibility: hidden;
     }
 
-    /* --- Cosmos Container --- */
+    /* --- Cosmos Container (Animation Wrapper) --- */
     #galaxy-cosmos {
         position: absolute; top: 0; left: 0; width: 0; height: 0;
         transform-style: preserve-3d;
+    }
+    
+    /* 銀河の出現アニメーション（回転＆ズームイン） */
+    .launching #galaxy-cosmos {
+        animation: galaxyLaunch 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    @keyframes galaxyLaunch {
+        0% { transform: scale(0) rotate(45deg); opacity: 0; }
+        100% { transform: scale(1) rotate(0deg); opacity: 1; }
     }
 
     /* --- Nodes --- */
     .g-node {
         position: absolute;
         width: var(--g-node-size); height: var(--g-node-size);
-        transform: translate(-50%, -50%) scale(0); /* 初期は非表示 */
+        transform: translate(-50%, -50%) scale(0); /* 初期状態非表示 */
         border-radius: 50%;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-align: center; cursor: pointer;
@@ -4110,7 +4107,7 @@
         touch-action: none;
         /* ポップアップアニメーション */
         animation: nodePop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        animation-play-state: paused; 
+        animation-play-state: paused;
     }
     @keyframes nodePop {
         from { transform: translate(-50%, -50%) scale(0); opacity: 0; }
@@ -4167,7 +4164,7 @@
     /* Lines */
     #galaxy-lines { position: absolute; top: -5000px; left: -5000px; width: 10000px; height: 10000px; pointer-events: none; z-index: 1; }
     .g-line { stroke: rgba(255,255,255,0.1); stroke-width: 1.5; transition: opacity 0.3s; opacity: 0; }
-    .active .g-line { animation: lineFadeIn 1s 0.5s forwards; }
+    .active .g-line { animation: lineFadeIn 1s 0.8s forwards; }
     @keyframes lineFadeIn { to { opacity: 1; } }
     .g-line.is-dimmed { opacity: 0.05 !important; }
     .g-line.is-related { stroke: rgba(255,255,255,0.5); stroke-width: 2.0; opacity: 1 !important; }
@@ -4184,7 +4181,7 @@
         display: flex; gap: 12px; z-index: 1000;
         padding: 8px 16px; border-radius: 40px;
         background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15);
-        opacity: 0; animation: fadeIn 1s 0.5s forwards;
+        opacity: 0; animation: fadeIn 1s 1.2s forwards;
     }
     .g-btn {
         background: transparent; border: none; color: rgba(255,255,255,0.8); padding: 0; border-radius: 50%; cursor: pointer;
@@ -4312,7 +4309,7 @@
         el.id = `g-node-${node.id}`;
         el.style.left = `${node.x}px`;
         el.style.top = `${node.y}px`;
-        // ランダムな遅延時間をセットしてシーケンシャルポップアップを実現
+        // ランダムな遅延時間をセット
         el.style.animationDelay = `${Math.random() * 0.8 + 0.1}s`;
 
         const iconSvg = gIcons[node.category] || gIcons.std;
@@ -4389,12 +4386,15 @@
         initGalaxy();
         gOverlay.classList.add('active');
         
-        // ノードアニメーションの再生開始
+        // エフェクト開始
+        gOverlay.classList.add('launching');
         document.querySelectorAll('.g-node').forEach(el => {
             el.style.animationPlayState = 'running';
         });
 
         fitToScreen();
+        
+        setTimeout(() => { gOverlay.classList.remove('launching'); }, 1500);
     }
 
     function closeMindMap() { gOverlay.classList.remove('active'); resetFocus(); }
