@@ -4018,14 +4018,12 @@
 <style>
     /* --- Settings & Variables --- */
     :root {
-        --g-node-size: 85px;         /* ノードサイズ */
-        --g-focus-size: 300px;       /* フォーカス時のサイズ */
+        --g-node-size: 80px;
         --g-font-size: 0.8rem;
     }
     @media (max-width: 768px) {
         :root {
-            --g-node-size: 65px;
-            --g-focus-size: 220px;
+            --g-node-size: 60px;
             --g-font-size: 0.65rem;
         }
     }
@@ -4036,10 +4034,12 @@
         background: radial-gradient(ellipse at center, #1e293b 0%, #020617 100%);
         z-index: 9999;
         display: none; opacity: 0;
-        transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: opacity 0.5s ease;
         overflow: hidden;
         cursor: grab;
-        touch-action: none;
+        touch-action: none; /* iOS/Android scroll disable */
+        user-select: none;
+        -webkit-user-select: none;
     }
     #galaxy-overlay.active { display: flex; opacity: 1; }
     #galaxy-overlay:active { cursor: grabbing; }
@@ -4047,7 +4047,7 @@
     /* Stars */
     .star {
         position: absolute; background: white; border-radius: 50%;
-        opacity: 0.6; pointer-events: none;
+        opacity: 0.6; pointer-events: none; will-change: opacity;
     }
 
     /* --- Universe Wrapper --- */
@@ -4057,6 +4057,8 @@
         width: 0; height: 0;
         transform-style: preserve-3d;
         will-change: transform;
+        /* Dragging performance */
+        backface-visibility: hidden; 
     }
 
     /* --- Nodes --- */
@@ -4067,137 +4069,108 @@
         border-radius: 50%;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-align: center; cursor: pointer;
-        transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        /* Animation for appearance and state change only, NOT position */
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.3s, border-color 0.3s, opacity 0.3s;
         backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
         box-shadow: 0 0 10px rgba(0,0,0,0.3), inset 0 0 10px rgba(255,255,255,0.05);
         border: 1px solid rgba(255,255,255,0.2);
-        user-select: none;
         z-index: 10;
-        background: rgba(30, 41, 59, 0.8);
+        background: rgba(30, 41, 59, 0.85);
         color: #94a3b8;
         font-weight: 700;
         font-size: var(--g-font-size);
+        touch-action: none;
     }
 
-    .g-node:hover {
-        z-index: 50;
-        border-color: white; color: white;
-        box-shadow: 0 0 20px rgba(255,255,255,0.3);
-        transform: translate(-50%, -50%) scale(1.2);
+    /* Hover effect (Desktop) */
+    @media (hover: hover) {
+        .g-node:hover {
+            z-index: 50;
+            border-color: white; color: white;
+            box-shadow: 0 0 20px rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%) scale(1.15);
+        }
     }
 
-    /* State: Dimmed (Unrelated) */
+    /* State: Dimmed */
     .g-node.is-dimmed {
-        opacity: 0.15;
+        opacity: 0.2;
         transform: translate(-50%, -50%) scale(0.8);
-        pointer-events: none;
     }
 
-    /* State: Related (Highlight) */
+    /* State: Related */
     .g-node.is-related {
         opacity: 1;
         border-color: rgba(255,255,255,0.8);
         box-shadow: 0 0 15px rgba(255,255,255,0.2);
         z-index: 40;
     }
-    /* Add connecting line indication via pseudo-element or border */
-    .g-node.is-related::after {
-        content: ''; position: absolute; top: -5px; left: -5px; right: -5px; bottom: -5px;
-        border-radius: 50%; border: 1px dashed rgba(255,255,255,0.3);
-        animation: spin 10s linear infinite;
-    }
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-    /* Content Switching */
-    .g-content-normal { display: flex; flex-direction: column; align-items: center; opacity: 1; transition: 0.3s; }
-    .g-content-focus { display: none; opacity: 0; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
-    
-    .g-node .icon-normal svg { width: 24px; height: 24px; margin-bottom: 4px; opacity: 0.8; }
-
-    /* --- Focused State --- */
+    /* State: Focused (Expanded) */
     .g-node.is-focused {
-        width: var(--g-focus-size); height: var(--g-focus-size);
         z-index: 100;
         background: rgba(15, 23, 42, 0.95);
-        border: 2px solid rgba(255,255,255,0.4);
-        box-shadow: 0 0 80px rgba(14, 165, 233, 0.2), inset 0 0 40px rgba(0,0,0,0.5);
-        transform: translate(-50%, -50%) scale(1) !important;
-        cursor: default;
+        border: 2px solid rgba(255,255,255,0.9);
+        box-shadow: 0 0 50px rgba(255,255,255,0.15), inset 0 0 30px rgba(255,255,255,0.1);
+        color: white;
+        transform: translate(-50%, -50%) scale(2.2) !important;
     }
-    .g-node.is-focused .g-content-normal { display: none; opacity: 0; }
-    .g-node.is-focused .g-content-focus { display: flex; animation: fadeIn 0.5s 0.2s forwards; }
-
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* Focus Content */
-    .gf-icon svg { width: 48px; height: 48px; margin-bottom: 10px; opacity: 0.9; }
-    .gf-title { font-size: 1.8rem; font-weight: 900; line-height: 1; margin-bottom: 5px; color: white; }
-    .gf-full { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; margin-bottom: 15px; color: #cbd5e1; }
-    .gf-desc { font-size: 0.85rem; line-height: 1.5; color: #cbd5e1; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-    .gf-btn { 
-        padding: 8px 24px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); 
-        background: rgba(255,255,255,0.1); color: white; cursor: pointer; transition: 0.2s; font-size: 0.85rem; font-weight: bold;
-    }
-    .gf-btn:hover { background: rgba(255,255,255,0.3); }
-
-    @media (max-width: 768px) {
-        .gf-icon svg { width: 32px; height: 32px; }
-        .gf-title { font-size: 1.4rem; }
-        .gf-desc { font-size: 0.75rem; -webkit-line-clamp: 2; }
-    }
-
+    
+    .g-node .icon-normal svg { width: 28px; height: 28px; margin-bottom: 4px; opacity: 0.8; transition: 0.3s; }
+    .g-node.is-focused .icon-normal svg { width: 36px; height: 36px; margin-bottom: 8px; opacity: 1; }
+    
     /* --- Lines --- */
     #galaxy-lines { 
         position: absolute; top: -5000px; left: -5000px; width: 10000px; height: 10000px;
         pointer-events: none; z-index: 1; overflow: visible;
     }
     .g-line {
-        stroke: rgba(255,255,255,0.08); stroke-width: 1.5; transition: stroke 0.3s, opacity 0.3s;
+        stroke: rgba(255,255,255,0.1); stroke-width: 1.5; transition: stroke 0.3s, opacity 0.3s;
     }
-    /* Dimmed lines */
     .g-line.is-dimmed { opacity: 0.05; }
-    /* Highlighted lines */
-    .g-line.is-related { stroke: rgba(255,255,255,0.6); stroke-width: 2.5; opacity: 1; }
+    .g-line.is-related { stroke: rgba(255,255,255,0.5); stroke-width: 2.0; opacity: 1; }
 
     /* --- Category Colors --- */
     .g-cat-bat { border-color: rgba(14, 165, 233, 0.4); }
-    .g-cat-bat.is-focused { border-color: #0ea5e9; text-shadow: 0 0 20px rgba(14, 165, 233, 0.5); }
+    .g-cat-bat.is-focused { border-color: #0ea5e9; text-shadow: 0 0 10px rgba(14, 165, 233, 0.8); }
     .g-cat-bat .icon-normal { color: #0ea5e9; }
-    
+    .g-cat-bat.is-focused .icon-normal { color: #e0f2fe; }
+
     .g-cat-pit { border-color: rgba(244, 63, 94, 0.4); }
-    .g-cat-pit.is-focused { border-color: #f43f5e; text-shadow: 0 0 20px rgba(244, 63, 94, 0.5); }
+    .g-cat-pit.is-focused { border-color: #f43f5e; text-shadow: 0 0 10px rgba(244, 63, 94, 0.8); }
     .g-cat-pit .icon-normal { color: #f43f5e; }
+    .g-cat-pit.is-focused .icon-normal { color: #ffe4e6; }
 
     .g-cat-fld { border-color: rgba(217, 119, 6, 0.4); }
-    .g-cat-fld.is-focused { border-color: #d97706; text-shadow: 0 0 20px rgba(217, 119, 6, 0.5); }
+    .g-cat-fld.is-focused { border-color: #d97706; text-shadow: 0 0 10px rgba(217, 119, 6, 0.8); }
     .g-cat-fld .icon-normal { color: #d97706; }
+    .g-cat-fld.is-focused .icon-normal { color: #fef3c7; }
 
     .g-cat-tot { border-color: rgba(16, 185, 129, 0.4); }
-    .g-cat-tot.is-focused { border-color: #10b981; text-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
+    .g-cat-tot.is-focused { border-color: #10b981; text-shadow: 0 0 10px rgba(16, 185, 129, 0.8); }
     .g-cat-tot .icon-normal { color: #10b981; }
+    .g-cat-tot.is-focused .icon-normal { color: #d1fae5; }
 
     /* --- Controls UI --- */
     .galaxy-controls {
-        position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-        display: flex; gap: 15px; z-index: 1000;
-        padding: 10px 20px; border-radius: 40px;
-        background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);
+        position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+        display: flex; gap: 12px; z-index: 1000;
+        padding: 8px 16px; border-radius: 40px;
+        background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
     .g-btn {
-        background: transparent; border: none; color: rgba(255,255,255,0.7);
+        background: transparent; border: none; color: rgba(255,255,255,0.8);
         padding: 0; border-radius: 50%; cursor: pointer;
-        transition: 0.3s; display: flex; align-items: center; justify-content: center;
+        transition: 0.2s; display: flex; align-items: center; justify-content: center;
         width: 44px; height: 44px; position: relative;
     }
-    .g-btn:hover { background: rgba(255,255,255,0.2); color: white; transform: translateY(-3px); }
+    .g-btn:hover { background: rgba(255,255,255,0.2); color: white; transform: translateY(-2px); }
+    .g-btn:active { transform: scale(0.95); }
     .g-btn svg { width: 22px; height: 22px; stroke-width: 2; }
-    .g-btn::after {
-        content: attr(data-tip); position: absolute; top: -35px; left: 50%; transform: translateX(-50%);
-        background: rgba(0,0,0,0.8); color: white; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px;
-        opacity: 0; pointer-events: none; transition: 0.2s; white-space: nowrap;
-    }
-    .g-btn:hover::after { opacity: 1; top: -45px; }
     .g-btn.close { color: #f43f5e; }
+    .g-btn.close:hover { background: rgba(244, 63, 94, 0.2); }
 </style>
 
 <div id="galaxy-overlay">
@@ -4207,19 +4180,11 @@
         <div id="galaxy-nodes"></div>
     </div>
     <div class="galaxy-controls">
-        <button class="g-btn" onclick="zoomIn()" data-tip="拡大 (+)">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
-        </button>
-        <button class="g-btn" onclick="zoomOut()" data-tip="縮小 (-)">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
-        </button>
-        <button class="g-btn" onclick="fitToScreen()" data-tip="全体表示">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
-        </button>
+        <button class="g-btn" onclick="zoomIn()" title="拡大 (+)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg></button>
+        <button class="g-btn" onclick="zoomOut()" title="縮小 (-)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" x2="16" y1="12" y2="12"/></svg></button>
+        <button class="g-btn" onclick="fitToScreen()" title="全体表示"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
         <div style="width:1px; height:24px; background:rgba(255,255,255,0.2); margin:auto 5px;"></div>
-        <button class="g-btn close" onclick="closeMindMap()" data-tip="閉じる">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-        </button>
+        <button class="g-btn close" onclick="closeMindMap()" title="閉じる"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
     </div>
 </div>
 
@@ -4231,18 +4196,28 @@
 
     let isInitialized = false;
     let nodesData = [];
-    let viewState = { scale: 0.35, panX: 0, panY: 0, isDragging: false, lastX: 0, lastY: 0 };
+    
+    // View State
+    let viewState = { 
+        scale: 0.35, panX: 0, panY: 0, 
+        isDragging: false, 
+        lastX: 0, lastY: 0,
+        // Pinch Zoom
+        isPinching: false,
+        pinchStartDist: 0,
+        pinchStartScale: 1
+    };
 
     // Zoom Constraints
-    const MAX_SCALE = 1.0; 
-    const MIN_SCALE = 0.35; // 下限を引き上げ（縮小しすぎない）
+    const MAX_SCALE = 1.2; 
+    const MIN_SCALE = 0.35;
 
     const CATEGORY_CENTERS = {
         'tot': { x: 0, y: 0 },
-        'std': { x: 0, y: -400 },
+        'std': { x: 0, y: -450 },
         'bat': { x: 800, y: 0 },
         'pit': { x: -800, y: 0 },
-        'fld': { x: 0, y: 600 }
+        'fld': { x: 0, y: 650 }
     };
 
     const gIcons = {
@@ -4256,11 +4231,10 @@
     function initGalaxy() {
         if (isInitialized) return;
         
-        // 1. Initial Position Assignment
         nodesData = terms.map((t) => {
             const center = CATEGORY_CENTERS[t.category] || {x:0, y:0};
             const angle = Math.random() * Math.PI * 2;
-            const dist = Math.random() * 300;
+            const dist = Math.random() * 320;
             return {
                 ...t,
                 x: center.x + Math.cos(angle) * dist,
@@ -4269,11 +4243,9 @@
             };
         });
 
-        // 2. Collision Resolution (Overlap Prevention)
-        const NODE_RADIUS = 120; // Visual radius + padding
-        const iterations = 50;
-        
-        for (let k = 0; k < iterations; k++) {
+        // Collision Resolution
+        const NODE_RADIUS = 130; 
+        for (let k = 0; k < 50; k++) {
             for (let i = 0; i < nodesData.length; i++) {
                 for (let j = i + 1; j < nodesData.length; j++) {
                     const n1 = nodesData[i];
@@ -4281,23 +4253,17 @@
                     const dx = n1.x - n2.x;
                     const dy = n1.y - n2.y;
                     const d = Math.sqrt(dx*dx + dy*dy);
-                    
                     if (d < NODE_RADIUS) {
-                        // Push apart
                         const force = (NODE_RADIUS - d) / (d || 1) * 0.5;
                         const mx = dx * force;
                         const my = dy * force;
-                        
-                        n1.x += mx;
-                        n1.y += my;
-                        n2.x -= mx;
-                        n2.y -= my;
+                        n1.x += mx; n1.y += my;
+                        n2.x -= mx; n2.y -= my;
                     }
                 }
             }
         }
 
-        // 3. Render
         renderLines();
         nodesData.forEach(node => createNodeElement(node));
         initStars();
@@ -4318,7 +4284,6 @@
                         const y1 = 5000 + source.y;
                         const x2 = 5000 + target.x;
                         const y2 = 5000 + target.y;
-                        // Add data attributes for highlighting
                         html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="g-line" data-src="${source.id}" data-tgt="${target.id}" />`;
                         pairs.add(pairId);
                     }
@@ -4336,45 +4301,42 @@
         el.style.top = `${node.y}px`;
 
         const iconSvg = gIcons[node.category] || gIcons.std;
-
         el.innerHTML = `
-            <div class="g-content-normal">
-                <div class="icon-normal">${iconSvg}</div>
-                <div>${node.title}</div>
-            </div>
-            <div class="g-content-focus">
-                <div class="gf-icon">${iconSvg}</div>
-                <div class="gf-title">${node.title}</div>
-                <div class="gf-full">${node.full}</div>
-                <div class="gf-desc">${node.short || '...'}</div>
-                <button class="gf-btn" onclick="openModal('${node.id}')">詳細・計算</button>
-            </div>
+            <div class="icon-normal">${iconSvg}</div>
+            <div>${node.title}</div>
         `;
 
-        // Click Logic (Removed "Misfire" check)
-        el.onmouseup = (e) => {
+        // Interaction Handling
+        const handleTap = (e) => {
+            // Prevent interaction if it was a drag
+            if (viewState.isDragging) return;
+            
+            // Allow event to propagate if needed, but for our app stop here
             e.stopPropagation(); 
-            // クリック判定を緩和（ドラッグ中かどうかの判定を削除）
+            // Also prevent default mouse event if touch
+            if (e.type === 'touchend') e.preventDefault();
+
             activateNode(node);
         };
 
+        // Use click for mouse, touchend logic handles drag check
+        el.onclick = handleTap;
+        // touchend is handled by window listener + isDragging check logic or direct binding
+        // Here we rely on click for Mouse. For Touch, we need to ensure click fires ONLY if not dragged.
+        // Browsers fire click after touchend if not canceled.
+        // We will manage "isDragging" state globally very carefully.
+        
         gNodesContainer.appendChild(el);
     }
 
     function activateNode(node) {
-        // 1. Reset Classes
-        document.querySelectorAll('.g-node').forEach(el => {
-            el.classList.remove('is-focused', 'is-related', 'is-dimmed');
-        });
-        document.querySelectorAll('.g-line').forEach(el => {
-            el.classList.remove('is-related', 'is-dimmed');
-        });
+        // Clear previous state
+        document.querySelectorAll('.g-node').forEach(el => el.classList.remove('is-focused', 'is-related', 'is-dimmed'));
+        document.querySelectorAll('.g-line').forEach(el => el.classList.remove('is-related', 'is-dimmed'));
 
-        // 2. Identify Related Nodes
         const currentId = node.id;
         const relatedIds = node.links || [];
 
-        // 3. Apply Classes
         document.querySelectorAll('.g-node').forEach(el => {
             const elId = el.id.replace('g-node-', '');
             if (elId === currentId) {
@@ -4386,30 +4348,29 @@
             }
         });
 
-        // 4. Highlight Lines
         document.querySelectorAll('.g-line').forEach(line => {
             const src = line.getAttribute('data-src');
             const tgt = line.getAttribute('data-tgt');
-            // Check if line connects current to related
-            if ( (src === currentId && relatedIds.includes(tgt)) || 
-                 (tgt === currentId && relatedIds.includes(src)) ) {
+            if ( (src === currentId && relatedIds.includes(tgt)) || (tgt === currentId && relatedIds.includes(src)) ) {
                 line.classList.add('is-related');
             } else {
                 line.classList.add('is-dimmed');
             }
         });
 
-        // 5. Move View
         animateView(-node.x, -node.y, MAX_SCALE);
     }
 
     function animateView(targetX, targetY, targetScale) {
-        gUniverse.style.transition = 'transform 0.8s cubic-bezier(0.19, 1, 0.22, 1)';
+        // Set transition for smooth movement
+        gUniverse.style.transition = 'transform 0.6s cubic-bezier(0.19, 1, 0.22, 1)';
         viewState.panX = targetX;
         viewState.panY = targetY;
         viewState.scale = targetScale;
         updateTransform();
-        setTimeout(() => { gUniverse.style.transition = ''; }, 800);
+        
+        // Clear transition so dragging is instant again
+        setTimeout(() => { gUniverse.style.transition = 'none'; }, 600);
     }
 
     function openMindMap() {
@@ -4421,12 +4382,8 @@
     function closeMindMap() {
         gOverlay.classList.remove('active');
         // Reset states
-        document.querySelectorAll('.g-node').forEach(el => {
-            el.classList.remove('is-focused', 'is-related', 'is-dimmed');
-        });
-        document.querySelectorAll('.g-line').forEach(el => {
-            el.classList.remove('is-related', 'is-dimmed');
-        });
+        document.querySelectorAll('.g-node').forEach(el => el.classList.remove('is-focused', 'is-related', 'is-dimmed'));
+        document.querySelectorAll('.g-line').forEach(el => el.classList.remove('is-related', 'is-dimmed'));
     }
 
     function updateTransform() {
@@ -4434,95 +4391,135 @@
     }
 
     function fitToScreen() {
-        viewState.panX = 0;
-        viewState.panY = 0;
+        viewState.panX = 0; viewState.panY = 0;
         const minDim = Math.min(window.innerWidth, window.innerHeight);
-        viewState.scale = Math.max(minDim / 2200, MIN_SCALE);
+        viewState.scale = Math.max(minDim / 2400, MIN_SCALE);
+        // Animate fit
+        gUniverse.style.transition = 'transform 0.6s ease';
         updateTransform();
+        setTimeout(() => { gUniverse.style.transition = 'none'; }, 600);
         
-        // Reset highlights
-        document.querySelectorAll('.g-node').forEach(el => {
-            el.classList.remove('is-focused', 'is-related', 'is-dimmed');
-        });
-        document.querySelectorAll('.g-line').forEach(el => {
-            el.classList.remove('is-related', 'is-dimmed');
-        });
+        document.querySelectorAll('.g-node').forEach(el => el.classList.remove('is-focused', 'is-related', 'is-dimmed'));
+        document.querySelectorAll('.g-line').forEach(el => el.classList.remove('is-related', 'is-dimmed'));
     }
 
     function zoomIn() {
         viewState.scale = Math.min(viewState.scale * 1.3, MAX_SCALE);
+        gUniverse.style.transition = 'transform 0.3s ease';
         updateTransform();
+        setTimeout(() => { gUniverse.style.transition = 'none'; }, 300);
     }
     function zoomOut() {
         viewState.scale = Math.max(viewState.scale / 1.3, MIN_SCALE);
+        gUniverse.style.transition = 'transform 0.3s ease';
         updateTransform();
+        setTimeout(() => { gUniverse.style.transition = 'none'; }, 300);
     }
 
-    // Input Events
+    /* --- Input Handling (Unified Touch/Mouse) --- */
+    
+    function getDistance(touches) {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // Wheel Zoom
     gOverlay.addEventListener('wheel', (e) => {
         e.preventDefault();
         const delta = e.deltaY * -0.001;
         viewState.scale = Math.min(Math.max(MIN_SCALE, viewState.scale + delta), MAX_SCALE);
+        // Disable transition for instant wheel response
+        gUniverse.style.transition = 'none'; 
         updateTransform();
-    });
+    }, {passive: false});
 
+    // Pointer Events (Mouse + Touch)
+    const handleStart = (x, y) => {
+        if (viewState.isPinching) return;
+        viewState.isDragging = false; // Reset initially, becomes true if moved
+        viewState.lastX = x;
+        viewState.lastY = y;
+        gUniverse.style.transition = 'none'; // Critical for direct tracking
+    };
+
+    const handleMove = (x, y) => {
+        if (viewState.isPinching) return;
+        
+        const dx = x - viewState.lastX;
+        const dy = y - viewState.lastY;
+
+        // Threshold to treat as drag vs tap
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+            viewState.isDragging = true;
+        }
+
+        if (viewState.isDragging) {
+            viewState.panX += dx;
+            viewState.panY += dy;
+            updateTransform();
+        }
+        viewState.lastX = x;
+        viewState.lastY = y;
+    };
+
+    // Mouse Listeners
     gOverlay.addEventListener('mousedown', (e) => {
         if (e.target.closest('.galaxy-controls')) return;
-        viewState.isDragging = true;
-        viewState.lastX = e.clientX;
-        viewState.lastY = e.clientY;
+        handleStart(e.clientX, e.clientY);
         gOverlay.style.cursor = 'grabbing';
     });
-
     window.addEventListener('mousemove', (e) => {
-        if (!viewState.isDragging) return;
-        const dx = e.clientX - viewState.lastX;
-        const dy = e.clientY - viewState.lastY;
-        viewState.panX += dx;
-        viewState.panY += dy;
-        viewState.lastX = e.clientX;
-        viewState.lastY = e.clientY;
-        gUniverse.style.transform = `translate(${viewState.panX}px, ${viewState.panY}px) scale(${viewState.scale})`;
-    });
-
-    window.addEventListener('mouseup', () => {
-        viewState.isDragging = false;
-        gOverlay.style.cursor = 'grab';
-    });
-    
-    // Background Reset Click
-    gOverlay.addEventListener('click', (e) => {
-        if(e.target === gOverlay || e.target === gUniverse) {
-             document.querySelectorAll('.g-node').forEach(el => el.classList.remove('is-focused', 'is-related', 'is-dimmed'));
-             document.querySelectorAll('.g-line').forEach(el => el.classList.remove('is-related', 'is-dimmed'));
+        // Only if mouse down (we don't track buttons globally easily without flags, but Overlay is modal)
+        // We use a flag inside overlay logic, but need global move for drag-out
+        if (gOverlay.style.cursor === 'grabbing') {
+            handleMove(e.clientX, e.clientY);
         }
     });
+    window.addEventListener('mouseup', () => {
+        gOverlay.style.cursor = 'grab';
+        // Note: isDragging stays true until next mousedown resets it, 
+        // ensuring 'click' handlers on nodes can check it.
+        setTimeout(() => { viewState.isDragging = false; }, 50);
+    });
 
-    // Touch Support
+
+    // Touch Listeners
     gOverlay.addEventListener('touchstart', (e) => {
         if (e.target.closest('.galaxy-controls')) return;
-        if(e.touches.length === 1) {
-            viewState.isDragging = true;
-            viewState.lastX = e.touches[0].clientX;
-            viewState.lastY = e.touches[0].clientY;
+        
+        if (e.touches.length === 2) {
+            viewState.isPinching = true;
+            viewState.pinchStartDist = getDistance(e.touches);
+            viewState.pinchStartScale = viewState.scale;
+        } else if (e.touches.length === 1) {
+            viewState.isPinching = false;
+            handleStart(e.touches[0].clientX, e.touches[0].clientY);
         }
     }, {passive: false});
 
     window.addEventListener('touchmove', (e) => {
-        if (!viewState.isDragging) return;
-        if(e.touches.length === 1) {
-            const dx = e.touches[0].clientX - viewState.lastX;
-            const dy = e.touches[0].clientY - viewState.lastY;
-            viewState.panX += dx;
-            viewState.panY += dy;
-            viewState.lastX = e.touches[0].clientX;
-            viewState.lastY = e.touches[0].clientY;
-            gUniverse.style.transform = `translate(${viewState.panX}px, ${viewState.panY}px) scale(${viewState.scale})`;
+        if (e.touches.length === 2 && viewState.isPinching) {
+            const dist = getDistance(e.touches);
+            const scaleChange = dist / viewState.pinchStartDist;
+            viewState.scale = Math.min(Math.max(MIN_SCALE, viewState.pinchStartScale * scaleChange), MAX_SCALE);
+            gUniverse.style.transition = 'none';
+            updateTransform();
+            e.preventDefault();
+        } else if (e.touches.length === 1 && !viewState.isPinching) {
+            handleMove(e.touches[0].clientX, e.touches[0].clientY);
         }
     }, {passive: false});
 
-    window.addEventListener('touchend', () => viewState.isDragging = false);
+    window.addEventListener('touchend', (e) => {
+        if (e.touches.length < 2) {
+            viewState.isPinching = false;
+        }
+        // Delay dragging reset slightly to allow click handlers to fire if needed
+        setTimeout(() => { viewState.isDragging = false; }, 50);
+    });
 
+    // Stars
     function initStars() {
         const starfield = document.getElementById('starfield');
         if (starfield.children.length > 0) return; 
