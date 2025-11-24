@@ -4742,6 +4742,73 @@
             }
         }
     }
+    // 未定義だった関数を追加: 結果表示用
+    function renderResult(name, pos, history, career, isBat) {
+        const content = document.getElementById('career-content');
+        
+        // ヘッダー統計の作成
+        let bigStatsHtml = '';
+        if (isBat) {
+            bigStatsHtml = `
+                <div class="c-big-stat"><div class="c-big-val">${career.h}</div><div class="c-big-lbl">HITS</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${career.hr}</div><div class="c-big-lbl">HR</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${(career.ab > 0 ? (career.h/career.ab).toFixed(3).replace(/^0/,'') : '.000')}</div><div class="c-big-lbl">AVG</div></div>
+                <div class="c-big-stat"><div class="c-big-val val-outstanding">${career.war.toFixed(1)}</div><div class="c-big-lbl">WAR</div></div>
+            `;
+        } else {
+            bigStatsHtml = `
+                <div class="c-big-stat"><div class="c-big-val">${career.w}</div><div class="c-big-lbl">WINS</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${career.sv}</div><div class="c-big-lbl">SAVES</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${career.so}</div><div class="c-big-lbl">SO</div></div>
+                <div class="c-big-stat"><div class="c-big-val val-outstanding">${career.war.toFixed(1)}</div><div class="c-big-lbl">WAR</div></div>
+            `;
+        }
+
+        // テーブルヘッダーと行の作成
+        const th = isBat 
+            ? `<th>Age</th><th>G</th><th>AVG</th><th>HR</th><th>RBI</th><th>SB</th><th>OPS</th><th>UZR</th><th style="color:var(--cat-bat)">WAR</th>`
+            : `<th>Age</th><th>G</th><th>W</th><th>L</th><th>SV</th><th>HLD</th><th>ERA</th><th>IP</th><th>SO</th><th style="color:var(--cat-pit)">WAR</th>`;
+
+        const rows = history.map(h => {
+            let cells = '';
+            if (isBat) {
+                cells = `
+                    <td>${h.age}</td><td>${h.g}</td><td>${h.avg}</td><td>${h.hr}</td><td>${h.rbi}</td>
+                    <td>${h.sb}</td><td>${h.ops}</td><td>${h.uzr}</td><td style="font-weight:bold">${h.war}</td>
+                `;
+            } else {
+                cells = `
+                    <td>${h.age}</td><td>${h.g}</td><td>${h.w}</td><td>${h.l}</td><td>${h.sv}</td>
+                    <td>${h.hld}</td><td>${h.era}</td><td>${h.ip}</td><td>${h.so}</td><td style="font-weight:bold">${h.war}</td>
+                `;
+            }
+            return `<tr>${cells}</tr>`;
+        }).join('');
+
+        content.innerHTML = `
+            <div class="career-panel" style="text-align:center; animation:fadeIn 0.5s ease;">
+                <div style="font-size:1.5rem; font-weight:900; margin-bottom:5px;">${name}</div>
+                <div style="color:#64748b; font-weight:700; margin-bottom:20px;">
+                    ${pos.toUpperCase()} / ${history.length} Seasons
+                </div>
+                
+                <div class="c-result-header">
+                    ${bigStatsHtml}
+                </div>
+                
+                <div class="c-history-wrap">
+                    <table class="c-table">
+                        <thead><tr>${th}</tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+                
+                <button class="calc-btn" style="margin-top:30px; background:#475569;" onclick="openCareerSim()">
+                    ${icons.search} 新しい選手を作成する
+                </button>
+            </div>
+        `;
+    }
 
     // Initial Render
     render();
