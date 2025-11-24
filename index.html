@@ -872,90 +872,6 @@
             <div class="filter-chip" onclick="filterCategory('tot')" data-cat="tot">総合</div>
         </div>
     </header>
-    
-    <div class="controls-area" id="main-controls">
-        <style>
-            /* スクロール時に隠すためのスタイル定義 */
-            .collapsible-actions {
-                max-height: 120px;
-                opacity: 1;
-                transform: translateY(0);
-                transition: all 0.4s cubic-bezier(0.33, 1, 0.68, 1);
-                overflow: hidden;
-                margin-bottom: 10px;
-            }
-            /* スクロール時の状態 (.scrolled クラス付与時) */
-            body.scrolled .collapsible-actions {
-                max-height: 0;
-                opacity: 0;
-                transform: translateY(-20px);
-                margin-bottom: 0;
-            }
-            /* ヘッダー自体の微調整 */
-            .controls-area {
-                transition: padding 0.3s;
-            }
-            body.scrolled .controls-area {
-                padding-bottom: 0.5rem;
-                background: rgba(255, 255, 255, 0.85); /* 少し透過させて没入感を維持 */
-            }
-            body.dark-mode.scrolled .controls-area {
-                background: rgba(30, 41, 59, 0.85);
-            }
-        </style>
-    
-        <div class="search-wrapper">
-            <span class="search-icon" id="searchIcon"></span> 
-            <input type="text" class="search-input" id="searchInput" placeholder="指標名、意味、計算式で検索" oninput="handleSearch()">
-            <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle" title="Dark Mode"></button>
-        </div>
-        
-        <div class="collapsible-actions">
-            <div style="display:flex; justify-content:center; gap:10px; margin-bottom:15px;">
-                <button class="preset-btn btn-save" onclick="openBatchCalc('bat')" style="font-size:0.9rem; padding:10px 20px;">野手一括計算</button>
-                <button class="preset-btn btn-del" onclick="openBatchCalc('pit')" style="font-size:0.9rem; padding:10px 20px; background:#f43f5e;">投手一括計算</button>
-            </div>
-    
-            <div style="display:flex; justify-content:center; margin-bottom:15px;">
-                <button class="preset-btn" onclick="openMindMap()" style="
-                    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); 
-                    color: white; 
-                    padding: 12px 36px; 
-                    font-size: 0.95rem; 
-                    border-radius: 50px; 
-                    box-shadow: 0 0 20px rgba(124, 58, 237, 0.4), inset 0 1px 0 rgba(255,255,255,0.2); 
-                    border: 1px solid rgba(255,255,255,0.1);
-                    display: flex; align-items: center; gap: 10px; transition: all 0.3s ease;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></svg>
-                    <span style="letter-spacing: 0.05em; font-weight:700;">GALAXY EXPLORER</span>
-                </button>
-            </div>
-
-            <div style="display:flex; justify-content:center; margin-bottom:15px; margin-top:10px;">
-                <button class="preset-btn" onclick="openCareerSim()" style="
-                    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
-                    color: white; 
-                    padding: 12px 36px; 
-                    font-size: 0.95rem; 
-                    border-radius: 50px; 
-                    box-shadow: 0 0 20px rgba(217, 119, 6, 0.4), inset 0 1px 0 rgba(255,255,255,0.2); 
-                    border: 1px solid rgba(255,255,255,0.1);
-                    display: flex; align-items: center; gap: 10px; transition: all 0.3s ease;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    <span style="letter-spacing: 0.05em; font-weight:700;">MY PLAYER CAREER</span>
-                </button>
-            </div>
-            
-        </div>
-    
-        <div class="filter-scroll">
-            <div class="filter-chip active" onclick="filterCategory('all')" data-cat="all">ALL</div>
-            <div class="filter-chip" onclick="filterCategory('std')" data-cat="std">基本</div>
-            <div class="filter-chip" onclick="filterCategory('bat')" data-cat="bat">打撃</div>
-            <div class="filter-chip" onclick="filterCategory('pit')" data-cat="pit">投球</div>
-            <div class="filter-chip" onclick="filterCategory('fld')" data-cat="fld">守備走塁</div>
-            <div class="filter-chip" onclick="filterCategory('tot')" data-cat="tot">総合</div>
-        </div>
         
         <script>
             let lastScrollY = window.scrollY;
@@ -4057,38 +3973,43 @@
         }
     }
 
-        /* --- Tool Menu Logic --- */
+/* --- Tool Menu Logic (修正版) --- */
     function openToolMenu() {
         const title = "LABORATORY TOOLS";
         const catColor = "var(--c-text-primary)";
     
         // ツール一覧の定義
-        // (未実装の機能がある場合はボタンが表示されませんが、エラーにはなりません)
+        // keepOpen: true の場合、メニューと同じウィンドウを使うため closeModal() を実行しない
         const tools = [
             { 
                 id: 'batch-bat', name: '野手一括計算', 
                 icon: icons.calculator, func: "openBatchCalc('bat')", 
-                color: 'var(--cat-bat)', desc: '打撃・守備指標をまとめて計算' 
+                color: 'var(--cat-bat)', desc: '打撃・守備指標をまとめて計算',
+                keepOpen: true
             },
             { 
                 id: 'batch-pit', name: '投手一括計算', 
                 icon: icons.calculator, func: "openBatchCalc('pit')", 
-                color: 'var(--cat-pit)', desc: '投球指標・FIP等をまとめて計算' 
+                color: 'var(--cat-pit)', desc: '投球指標・FIP等をまとめて計算',
+                keepOpen: true
             },
             { 
                 id: 'galaxy', name: 'GALAXY EXPLORER', 
                 icon: icons.sparkle, func: "openMindMap()", 
-                color: '#8b5cf6', desc: '指標の関係性を宇宙地図で探索' 
+                color: '#8b5cf6', desc: '指標の関係性を宇宙地図で探索',
+                keepOpen: false // マインドマップは別画面なのでメニューを閉じる
             },
             { 
                 id: 'gm', name: 'GM CHALLENGE', 
                 icon: icons.barChart, func: "openGMChallenge()", 
-                color: '#10b981', desc: '最強チーム編成シミュレーション' 
+                color: '#10b981', desc: '最強チーム編成シミュレーション',
+                keepOpen: true
             },
             { 
                 id: 'career', name: 'MY CAREER', 
                 icon: icons.save, func: "openCareerSim()", 
-                color: '#d97706', desc: '選手人生シミュレーション' 
+                color: '#d97706', desc: '選手人生シミュレーション',
+                keepOpen: true
             }
         ];
     
@@ -4096,11 +4017,13 @@
         
         let count = 0;
         tools.forEach(t => {
-            // 関数が存在するかチェック（以前のコードを適用していない場合の安全策）
             const fnName = t.func.split('(')[0];
             if (typeof window[fnName] === 'function') {
+                // keepOpenフラグに応じて closeModal() を呼ぶか決定
+                const clickAction = t.keepOpen ? t.func : `${t.func}; closeModal();`;
+                
                 html += `
-                    <div onclick="${t.func}; closeModal();" style="
+                    <div onclick="${clickAction}" style="
                         background:var(--c-bg); border:1px solid var(--c-border); border-radius:16px; padding:20px; 
                         cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:15px; box-shadow:var(--shadow-card);
                     " onmouseover="this.style.borderColor='${t.color}'; this.style.transform='translateY(-3px)';" 
