@@ -4186,8 +4186,8 @@
         });
     }
 
-    /* --- New Career Simulation Logic (v3.0 Power Pros Style) --- */
-
+    /* --- New Career Simulation Logic (v3.1 Fixed K-Rate & Name) --- */
+    
     let careerMode = 'batter'; // 'batter' or 'pitcher'
     
     function openCareerSim() {
@@ -4206,7 +4206,7 @@
         renderCareerCreationUI();
     }
     
-    // ランク判定用関数 (パワプロ風)
+    // ランク判定用関数
     function getRank(val) {
         if (val >= 90) return { rank: 'S', class: 'rank-s' };
         if (val >= 80) return { rank: 'A', class: 'rank-a' };
@@ -4220,17 +4220,20 @@
     
     function updateRankDisplay(id, val) {
         const r = getRank(val);
-        document.getElementById(`val-${id}`).innerHTML = 
-            `<span class="${r.class}" style="margin-right:8px; font-size:1.1em;">${r.rank}</span>${val}`;
-        document.getElementById(`fill-${id}`).style.width = `${val}%`;
+        const labelEl = document.getElementById(`val-${id}`);
+        const fillEl = document.getElementById(`fill-${id}`);
         
-        // バーの色もランクに合わせる
-        const colorMap = {
-            'S': '#eab308', 'A': '#f97316', 'B': '#ef4444', 
-            'C': '#f43f5e', 'D': '#10b981', 'E': '#3b82f6', 
-            'F': '#64748b', 'G': '#94a3b8'
-        };
-        document.getElementById(`fill-${id}`).style.background = colorMap[r.rank];
+        if(labelEl && fillEl) {
+            labelEl.innerHTML = `<span class="${r.class}" style="margin-right:8px; font-size:1.1em;">${r.rank}</span>${val}`;
+            fillEl.style.width = `${val}%`;
+            
+            const colorMap = {
+                'S': '#eab308', 'A': '#f97316', 'B': '#ef4444', 
+                'C': '#f43f5e', 'D': '#10b981', 'E': '#3b82f6', 
+                'F': '#64748b', 'G': '#94a3b8'
+            };
+            fillEl.style.background = colorMap[r.rank];
+        }
     }
     
     function renderCareerCreationUI() {
@@ -4240,7 +4243,6 @@
         const activeClassBat = isBat ? 'active' : '';
         const activeClassPit = !isBat ? 'active' : '';
     
-        // パラメータ定義 (パワプロ参考)
         const params = isBat ? [
             {id:'contact', label:'ミート (Contact)', val:55, desc:'打率・コンタクト能力'},
             {id:'power', label:'パワー (Power)', val:55, desc:'本塁打・長打力'},
@@ -4256,7 +4258,6 @@
         ];
     
         const slidersHtml = params.map(p => {
-            // 特別な範囲を持つパラメータ(球速、変化球)の処理
             const isSpecial = (p.id === 'velocity' || p.id === 'breaking');
             const min = p.min || 1;
             const max = p.max || 100;
@@ -4264,13 +4265,11 @@
             let valDisplay = p.val;
             let rankHtml = '';
             
-            // 通常の0-100パラメータのみランク表示
             if (!isSpecial) {
                 const r = getRank(p.val);
                 rankHtml = `<span class="${r.class}" style="margin-right:8px; font-size:1.1em;">${r.rank}</span>`;
             }
             
-            // スライダーの％計算
             let percent = ((p.val - min) / (max - min)) * 100;
     
             return `
@@ -4286,12 +4285,9 @@
                                 const v = parseInt(this.value);
                                 const min = ${min}, max = ${max};
                                 const pct = ((v - min) / (max - min)) * 100;
-                                
-                                /* 球速・変化球以外の通常パラメータ */
                                 if(${!isSpecial}) {
                                     updateRankDisplay('${p.id}', v);
                                 } else {
-                                    /* 特殊パラメータの更新 */
                                     document.getElementById('val-${p.id}').innerText = v;
                                     document.getElementById('fill-${p.id}').style.width = pct + '%';
                                 }
@@ -4303,7 +4299,7 @@
         }).join('');
     
         const posOptions = isBat 
-            ? `<option value="cf">センター</option><option value="ss">ショート</option><option value="c">キャッチャー</option><option value="rf">ライト</option><option value="lf">レフト</option><option value="3b">サード</option><option value="2b">セカンド</option><option value="1b">ファースト</option><option value="dh">DH</option>`
+            ? `<option value="c">キャッチャー</option><option value="1b">ファースト</option><option value="2b">セカンド</option><option value="3b">サード</option><option value="ss">ショート</option><option value="cf">センター</option><option value="lf">レフト</option><option value="rf">ライト</option><option value="dh">DH</option>`
             : `<option value="sp">先発 (Starter)</option><option value="rp">救援 (Reliever)</option>`;
     
         content.innerHTML = `
@@ -4322,7 +4318,7 @@
     
                     <div class="c-form-group">
                         <label class="c-label">選手名</label>
-                        <input type="text" id="sim-name" class="c-input" placeholder="例: パワプロくん" value="パワプロくん">
+                        <input type="text" id="sim-name" class="c-input" placeholder="入力なしで「名無し選手」" value="">
                     </div>
     
                     <div class="c-form-group">
@@ -4364,7 +4360,6 @@
             </div>
         `;
         
-        // 初期表示のランク色反映
         if(isBat) {
             ['contact','power','speed','arm','defense','catch'].forEach(id => updateRankDisplay(id, 55));
         } else {
@@ -4374,12 +4369,14 @@
     }
     
     function runCareerSim() {
-        const name = document.getElementById('sim-name').value || "名無し選手";
+        // 名前が空なら「名無し選手」を設定
+        let rawName = document.getElementById('sim-name').value;
+        const name = rawName.trim() === "" ? "名無し選手" : rawName;
+        
         const startAge = parseInt(document.getElementById('sim-age').value);
         const pos = document.getElementById('sim-pos').value;
         const isBat = careerMode === 'batter';
     
-        // 能力取得
         let stats = {};
         if (isBat) {
             ['contact', 'power', 'speed', 'arm', 'defense', 'catch'].forEach(id => {
@@ -4394,158 +4391,131 @@
         let age = startAge;
         let active = true;
         let history = [];
-        // 通算成績用オブジェクト
         let career = isBat 
             ? { g:0, pa:0, ab:0, h:0, hr:0, rbi:0, sb:0, bb:0, so:0, war:0 }
-            : { g:0, ip_outs:0, w:0, l:0, sv:0, hld:0, so:0, bb:0, war:0, er:0 }; // IPはアウト数で管理
+            : { g:0, ip_outs:0, w:0, l:0, sv:0, hld:0, so:0, bb:0, war:0, er:0 };
     
         let peakWar = -999;
         let peakStatsData = null;
     
-        // シミュレーションループ (最大45歳)
         while (active && age < 46) {
-            // --- 1. 成長・衰退ロジック (パワプロ風ペナント参考) ---
-            // 早熟・普通・晩成などのタイプ分けは簡易的にランダム
+            // --- 成長・衰退 ---
             let growth = 0;
-            
-            // 20代中盤まで成長、30過ぎて衰退
-            if (age < 24) growth = Math.random() * 4 + 1; // 伸び盛り
-            else if (age < 28) growth = Math.random() * 2; // 全盛期手前
-            else if (age < 32) growth = Math.random() * 1 - 1; // 全盛期維持
-            else if (age < 36) growth = -Math.random() * 3 - 1; // 衰退開始
-            else growth = -Math.random() * 5 - 3; // 急激な衰退
+            if (age < 24) growth = Math.random() * 4 + 1;
+            else if (age < 28) growth = Math.random() * 2;
+            else if (age < 32) growth = Math.random() * 1 - 1;
+            else if (age < 36) growth = -Math.random() * 3 - 1;
+            else growth = -Math.random() * 5 - 3;
     
-            // パラメータ更新
             if (isBat) {
                 Object.keys(stats).forEach(k => {
                     stats[k] = Math.max(1, Math.min(100, stats[k] + growth));
                 });
             } else {
-                // 投手: 球速は落ちやすい
                 stats.velocity = Math.max(120, Math.min(170, stats.velocity + (growth * 0.5))); 
                 ['control', 'stamina', 'breaking'].forEach(k => {
                     stats[k] = Math.max(1, Math.min(100, stats[k] + growth));
                 });
             }
     
-            // 総合能力値 (1軍レベル判定用)
             let abilityScore = 0;
             if (isBat) {
-                // 野手: 走攻守バランス
                 abilityScore = (stats.contact + stats.power + stats.defense + stats.speed)/4;
             } else {
-                // 投手: 球速150km/h換算 + コンスタ変化球
-                let veloScore = (stats.velocity - 130) * 2; // 130->0, 150->40, 160->60
+                let veloScore = (stats.velocity - 130) * 2;
                 abilityScore = (veloScore + stats.control + stats.stamina + stats.breaking*5) / 4;
             }
     
             let season = {};
             let war = 0;
     
-            // 1軍出場ライン (パワプロのEランク平均程度 = 45)
             if (abilityScore < 40) {
+                // 2軍
                 season = isBat 
                     ? { g:0, avg:'.---', hr:0, rbi:0, sb:0, ops:'.---', bb:0, so:0, uzr:'---' } 
                     : { g:0, w:0, l:0, sv:0, hld:0, era:'-.--', so:0, whip:'-.--', ip:'0.0' };
                 war = 0;
-                // 25歳以上で能力不足なら引退確率大
                 if (age > 25 && Math.random() < 0.3) active = false; 
             } else {
-                // 1軍定着
+                // 1軍
                 if (isBat) {
-                    // === 野手成績 ===
-                    // 試合数: スタミナ概念はないが能力が高いほどフル出場
                     let games = Math.floor(Math.min(143, (abilityScore - 30) * 2.5 + Math.random()*20));
                     if(games > 143) games = 143;
                     
                     let pa = Math.floor(games * (3.5 + Math.random())); 
-                    // 四球率: 選球眼の代わりに「ミート」とランダム要素で近似 (パワプロには選球眼パラメータが隠しなので)
-                    // 本来ならEyeパラメータを作るべきだが、今回はContactの一部 + ランダムで
                     let bb_pct = 0.05 + (stats.contact * 0.0005); 
                     let bb = Math.floor(pa * bb_pct);
                     let ab = pa - bb;
     
-                    // 打率: Contact 0-100 -> .150 - .380
-                    // C(60) -> .270くらい
                     let avg = 0.150 + (stats.contact * 0.002) + (Math.random()*0.04 - 0.02);
                     let h = Math.floor(ab * avg);
     
-                    // 本塁打: Power 0-100 -> 0 - 60
-                    // B(70) -> 25本くらい
-                    let hr_rate = Math.pow(stats.power, 2) / 180000; // 二乗で増える
+                    let hr_rate = Math.pow(stats.power, 2) / 180000;
                     let hr = Math.floor(pa * hr_rate * (0.8 + Math.random()*0.4));
     
-                    // 三振: Powerが高いと増え、Contactが高いと減る傾向
                     let so_rate = 0.15 + (stats.power*0.0015) - (stats.contact*0.001);
                     if(so_rate < 0.05) so_rate = 0.05;
                     let so = Math.floor(pa * so_rate);
     
-                    // 走塁
                     let sb = Math.floor(games * (stats.speed > 60 ? (stats.speed-50)*0.02 : 0) * Math.random());
-                    
-                    // 打点 (簡易)
                     let rbi = Math.floor(h*0.15 + hr*2.8 + Math.random()*10);
     
-                    // 計算
                     let obp = pa>0 ? (h+bb)/pa : 0;
-                    let slg = ab>0 ? (h + hr*3)/ab : 0; // 簡易
+                    let slg = ab>0 ? (h + hr*3)/ab : 0; 
                     let ops = obp + slg;
                     
-                    // UZR (Defense, Arm, Catchから算出)
-                    // 平均0, 範囲 -20 ~ +20
-                    let defScore = (stats.defense*2 + stats.arm + stats.catch)/4; // 0-100
+                    let defScore = (stats.defense*2 + stats.arm + stats.catch)/4;
                     let uzr = (defScore - 50) * 0.5; 
-                    // ポジション補正
                     let posVal = {'ss':1, '2b':0.8, 'cf':0.5, '3b':0, 'rf':-0.5, 'lf':-0.8, '1b':-1, 'dh':-1.5, 'c':1.2}[pos] || 0;
                     let effectiveUzr = uzr * (games/143);
     
-                    // WAR (簡易)
-                    let wRAA = ((ops - 0.730) / 1.2) * pa * 0.1; // 係数は適当
+                    let wRAA = ((ops - 0.730) / 1.2) * pa * 0.1; 
                     let rep = 20 * (pa/600);
                     let posAdj = posVal * 10 * (games/143);
                     war = (wRAA + effectiveUzr + posAdj + rep) / 10;
-                    if(war > 12) war = 12; // Cap
+                    if(war > 12) war = 12;
     
-                    // 表示用OPS処理
                     let opsStr = ops.toFixed(3);
-                    if(ops < 1.0) opsStr = opsStr.replace(/^0/, ''); // .950
+                    if(ops < 1.0) opsStr = opsStr.replace(/^0/, ''); 
     
                     season = { g:games, avg: avg.toFixed(3).replace(/^0/,''), hr, rbi, sb, bb, so, ops: opsStr, uzr: effectiveUzr.toFixed(1) };
                     
-                    // 通算加算
                     career.g += games; career.pa += pa; career.ab += ab; career.h += h; 
                     career.hr += hr; career.rbi += rbi; career.sb += sb; career.bb += bb; career.so += so;
                 } else {
-                    // === 投手成績 ===
                     let isStarter = pos === 'sp';
                     let games = isStarter ? Math.floor(Math.min(28, abilityScore/2.2)) : Math.floor(Math.min(70, abilityScore/1.1));
                     
-                    // イニング
                     let ipPerG = isStarter ? (4 + stats.stamina*0.05) : (0.5 + stats.stamina*0.01);
                     let totalIp = games * ipPerG;
                     let outs = Math.floor(totalIp * 3);
                     
-                    // 防御率
-                    // Velocity, Control, Breaking から FIPベースの能力値を算出
-                    // 150km(50) + Con C(60) + Henka 3(15) -> 125pt -> ERA 3.00
                     let pitSkill = (stats.velocity-100)*1.5 + stats.control + stats.breaking*10;
-                    let baseEra = 6.00 - (pitSkill * 0.03); // Skill 100 -> 3.00
+                    let baseEra = 6.00 - (pitSkill * 0.03); 
                     let era = Math.max(0.80, baseEra + (Math.random()*1.5 - 0.75));
                     
-                    // 奪三振
-                    let k9 = (stats.velocity-130)*0.2 + stats.breaking*0.8; 
-                    if(k9<3) k9=3;
+                    // --- 奪三振ロジック修正 ---
+                    // Velocity 130-170, Breaking 0-20
+                    // K/9 = 4.0 (基準) + 球速分 + 変化球分
+                    // 球速: 150km基準で ±10kmで±1.5程度変動
+                    let k9_velo = (stats.velocity - 130) * 0.15; 
+                    let k9_break = stats.breaking * 0.35;
+                    let k9 = 3.5 + k9_velo + k9_break;
+                    
+                    // 上限キャップ (K/9 が 16.0 を超えないように)
+                    if(k9 > 16.0) k9 = 16.0;
+    
                     let so = Math.floor(totalIp * k9 / 9);
     
-                    // 与四球
+                    // 物理制限: 奪三振数はアウトの総数を超えない
+                    if(so > outs) so = outs - 1; 
+    
                     let bb9 = 5.0 - (stats.control * 0.04); 
                     if(bb9<1) bb9=1;
                     let bb = Math.floor(totalIp * bb9 / 9);
     
-                    // WHIP
                     let whip = 1.30 + (era - 3.50)*0.1; 
     
-                    // 勝敗・セーブ・ホールド
                     let w=0, l=0, sv=0, hld=0;
                     if(isStarter) {
                         let winPct = 0.5 - (era - 3.50)*0.15;
@@ -4553,10 +4523,8 @@
                         w = Math.max(0, Math.floor(dec * winPct));
                         l = Math.max(0, Math.floor(dec * (1-winPct)));
                     } else {
-                        let winPct = 0.5;
                         w = Math.floor(games * 0.1);
                         l = Math.floor(games * 0.1);
-                        // 抑え適正 (球速150以上 or 変化球多い)
                         if (stats.velocity >= 150 || stats.breaking >= 10) {
                             sv = Math.floor(games * 0.6);
                         } else {
@@ -4564,13 +4532,11 @@
                         }
                     }
     
-                    // WAR (FIPベース簡易)
-                    let fip = era; // 近似
+                    let fip = era; 
                     let raa = (4.50 - fip) * (totalIp/9);
                     let rep = 20 * (totalIp/200);
                     war = (raa + rep) / 10;
     
-                    // IP表記 (xx.1, xx.2)
                     let ipDisplay = Math.floor(outs/3) + (outs%3 === 0 ? "" : "." + (outs%3));
     
                     season = { g:games, w, l, sv, hld, era: era.toFixed(2), so, whip: whip.toFixed(2), ip: ipDisplay };
@@ -4584,7 +4550,6 @@
             career.war += war;
             history.push({ age, ...season, war: war.toFixed(1) });
     
-            // 全盛期データ更新
             if (war > peakWar) {
                 peakWar = war;
                 window.tempPeakStats = isBat ? {
@@ -4604,15 +4569,12 @@
             }
     
             age++;
-            // 引退判定 (35歳以上で能力低下、または成績不振)
             if (age >= 45) active = false;
             if (age > 30 && war < 0 && Math.random() < 0.5) active = false;
         }
     
-        // --- 結果表示 (v3.0) ---
         const resultPanel = document.getElementById('career-result-panel');
         
-        // ヘッダー（通算成績）
         let bigStats = '';
         if (isBat) {
             let careerAvg = career.ab ? (career.h / career.ab).toFixed(3).replace(/^0/,'') : '.---';
@@ -4634,7 +4596,6 @@
             `;
         }
     
-        // 詳細履歴テーブル
         const th = isBat 
             ? `<th>年齢</th><th>試合</th><th>打率</th><th>HR</th><th>打点</th><th>盗塁</th><th>四球</th><th>三振</th><th>OPS</th><th>UZR</th><th>WAR</th>`
             : `<th>年齢</th><th>登板</th><th>勝</th><th>敗</th><th>S</th><th>H</th><th>回</th><th>防率</th><th>奪三振</th><th>WHIP</th><th>WAR</th>`;
