@@ -7,6 +7,7 @@ const ASSETS = [
   './Copilot_20251122_185005.png'
   // HTMLファイルはあえてキャッシュリストから外します
   './manifest.json'
+  './styles.css',
 ];
 
 // インストール処理
