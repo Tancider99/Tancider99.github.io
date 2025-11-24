@@ -1124,19 +1124,6 @@
             </div>
         </details>
     </div>
-        
-    <script>
-        let lastScrollY = window.scrollY;
-        window.addEventListener('scroll', () => {
-            const currentScrollY = window.scrollY;
-            if (currentScrollY > 60) {
-                document.body.classList.add('scrolled');
-            } else {
-                document.body.classList.remove('scrolled');
-            }
-            lastScrollY = currentScrollY;
-        }, { passive: true });
-    </script>
 
     <div class="grid-container" id="grid">
         <!-- Generated -->
