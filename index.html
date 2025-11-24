@@ -1009,38 +1009,25 @@
             <div class="filter-chip" onclick="filterCategory('tot')" data-cat="tot">総合</div>
         </div>
     </header>
-        
-        <script>
-            let lastScrollY = window.scrollY;
-            window.addEventListener('scroll', () => {
-                const currentScrollY = window.scrollY;
-                if (currentScrollY > 60) {
-                    document.body.classList.add('scrolled');
-                } else {
-                    document.body.classList.remove('scrolled');
-                }
-                lastScrollY = currentScrollY;
-            }, { passive: true });
-        </script>
-    </div>
 
-    <div class="grid-container" id="grid">
-        <!-- Generated -->
-    </div>
-
-    <footer class="footer-area">
-        <details class="footer-details">
-            <summary class="footer-summary">
-                <span class="footer-icon" id="footer-icon-book"></span> 
-                <span>計算ロジックの説明・参考サイト</span>
+    <div style="max-width: 1200px; margin: 0 auto; padding: 0 2rem 20px;">
+        <details class="footer-details" style="border-color: var(--cat-bat); background: var(--bg-bat); margin-bottom: 20px;">
+            <summary class="footer-summary" style="font-weight:800; color:var(--cat-bat);">
+                <span class="footer-icon">⚠️</span> 
+                <span>【重要】当サイトの指標値と計算ロジックについて（引用前にお読みください）</span>
             </summary>
             <div class="footer-content">
+                <div class="warning-msg" style="margin-bottom: 30px; display:block; border-left: 4px solid #f59e0b; background: #fffbeb; color: #1e293b;">
+                    <strong style="display:block; margin-bottom:8px; color:#b45309;">⚠️ 指標の解釈に関するご注意</strong>
+                    当サイトで算出される指標（WAR, wRC+, xFIPなど）は、ユーザーが入力した限られたデータを基に計算される<strong>「シミュレーション値（概算）」</strong>です。<br>
+                    公式記録や専門サイト（1.02やFanGraphs等）の厳密な算出値とは、データの粒度や補正係数の違いにより<strong>必ず乖離が発生します。</strong><br>
+                    SNS等で数値を共有・引用される際は、<strong>「あくまで本サイト独自の簡易計算による推定値である」</strong>ことを明記し、公式記録と混同されないようご配慮をお願いいたします。
+                </div>
+
                 <div style="margin-bottom: 30px;">
-                    <h3>計算ロジックについて</h3>
+                    <h3>計算ロジックの前提</h3>
                     <p>
-                        当サイトで計算される指標は、一般的なセイバーメトリクスの定義に基づいています。<br>
-                        ただし、入力項目では完全な値を算出できない指標（外野フライ数など）は、リーグ平均の値を基におおよその値を算出しています。<br>
-                        本ツールでは、デフォルト値として近年のNPB平均値に近い概算値を使用しているため、厳密な公式記録とは異なる場合があります。<br>
+                        入力項目として存在しないデータ（例：外野フライの正確な割合、球場ごとの詳細なパークファクター変動など）は、近年のNPB平均値に近い値をデフォルトとして使用しています。<br>
                         より正確な値を求めたい場合は、各計算画面の「詳細設定」からリーグ総合成績などのパラメータを調整してください。
                     </p>
                 </div>
@@ -1136,6 +1123,30 @@
                 </div>
             </div>
         </details>
+    </div>
+        
+    <script>
+        let lastScrollY = window.scrollY;
+        window.addEventListener('scroll', () => {
+            const currentScrollY = window.scrollY;
+            if (currentScrollY > 60) {
+                document.body.classList.add('scrolled');
+            } else {
+                document.body.classList.remove('scrolled');
+            }
+            lastScrollY = currentScrollY;
+        }, { passive: true });
+    </script>
+
+    <div class="grid-container" id="grid">
+        <!-- Generated -->
+    </div>
+
+    <footer class="footer-area">
+        <div style="text-align:center; color:var(--c-text-secondary); padding:20px;">
+            <p style="margin:0; font-weight:600;">SABR METRICS LAB</p>
+            <p style="margin:5px 0 0; font-size:0.8rem;">Ultimate Baseball Analytics Dictionary</p>
+        </div>
     </footer>
     
     <div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
