@@ -200,7 +200,7 @@
 
         .filter-chip {
             background: var(--c-surface);
-            border: 1px solid var(--c-border);
+            border: 1:px solid var(--c-border);
             color: var(--c-text-secondary);
             padding: 8px 20px;
             border-radius: 50px;
@@ -1124,6 +1124,19 @@
             </div>
         </details>
     </div>
+        
+    <script>
+        let lastScrollY = window.scrollY;
+        window.addEventListener('scroll', () => {
+            const currentScrollY = window.scrollY;
+            if (currentScrollY > 60) {
+                document.body.classList.add('scrolled');
+            } else {
+                document.body.classList.remove('scrolled');
+            }
+            lastScrollY = currentScrollY;
+        }, { passive: true });
+    </script>
 
     <div class="grid-container" id="grid">
         <!-- Generated -->
@@ -4195,8 +4208,8 @@
         });
     }
 
-    // --- Career Mode Logic (Fixed & Consolidated) ---
-
+    /* --- New Career Simulation Logic (v3.1 Fixed K-Rate & Name) --- */
+    
     let careerMode = 'batter'; // 'batter' or 'pitcher'
     
     function openCareerSim() {
@@ -4242,23 +4255,6 @@
                 'F': '#64748b', 'G': '#94a3b8'
             };
             fillEl.style.background = colorMap[r.rank];
-        }
-    }
-
-    // 【追加】ケガしやすさ表示更新用関数（HTML内のoninputを簡素化するため）
-    function updateInjuryDisplay(val) {
-        const v = parseInt(val);
-        let t = '普通';
-        let c = '#0f172a';
-        if(v < 20) { t = '鉄人'; c = '#10b981'; }
-        else if(v < 40) { t = '頑丈'; c = '#16a34a'; }
-        else if(v > 60) { t = 'ケガ持ち'; c = '#f97316'; }
-        else if(v > 80) { t = 'スペランカー'; c = '#ef4444'; }
-        
-        const el = document.getElementById('val-injury');
-        if(el) {
-            el.innerText = t + '(' + v + ')';
-            el.style.color = c;
         }
     }
     
@@ -4348,23 +4344,14 @@
                     </div>
     
                     <div class="c-form-group">
-                        <div class="c-slider-row" style="display:flex; justify-content:space-between; font-weight:700; font-size:0.85rem; margin-bottom:5px; color:#64748b;">
+                        <div class="c-slider-row">
                             <span class="c-label" style="margin:0;">開始年齢</span>
-                            <span class="c-slider-val" id="val-age" style="color:#0f172a;">18歳</span>
+                            <span class="c-slider-val" id="val-age">18歳</span>
                         </div>
-                        <input type="range" id="sim-age" min="18" max="30" value="18" class="c-slider" style="width:100%;"
+                        <input type="range" id="sim-age" min="18" max="30" value="18" class="c-slider"
                             oninput="document.getElementById('val-age').innerText = this.value + '歳'">
-                    </div>
-
-                    <div class="c-form-group">
-                        <div class="c-slider-row" style="display:flex; justify-content:space-between; font-weight:700; font-size:0.85rem; margin-bottom:5px; color:#64748b;">
-                            <span class="c-label" style="margin:0;">ケガしやすさ</span>
-                            <span class="c-slider-val" id="val-injury" style="color:#0f172a;">普通(50)</span>
-                        </div>
-                        <input type="range" id="sim-injury" min="0" max="100" value="50" class="c-slider" style="width:100%; accent-color:#ef4444;"
-                            oninput="updateInjuryDisplay(this.value)">
                         <div style="font-size:0.75rem; color:#94a3b8; margin-top:5px; display:flex; justify-content:space-between;">
-                            <span>鉄人(0)</span><span>普通(50)</span><span>ガラス(100)</span>
+                            <span>高卒(18)</span><span>大卒(22)</span><span>社会人(24~)</span>
                         </div>
                     </div>
     
@@ -4403,21 +4390,14 @@
         }
     }
     
-    // --- Career Simulation Logic (Full & Consolidated) ---
     function runCareerSim() {
+        // 名前が空なら「名無し選手」を設定
         let rawName = document.getElementById('sim-name').value;
         const name = rawName.trim() === "" ? "名無し選手" : rawName;
         
         const startAge = parseInt(document.getElementById('sim-age').value);
-        const injuryProne = parseInt(document.getElementById('sim-injury').value);
-        
         const pos = document.getElementById('sim-pos').value;
         const isBat = careerMode === 'batter';
-
-        // リーグ定数
-        const lgData = {};
-        ADVANCED_LEAGUE_INPUTS.forEach(inp => { lgData[inp.id] = inp.default; });
-        const C = calcDerived(lgData); 
     
         let stats = {};
         if (isBat) {
@@ -4438,348 +4418,238 @@
             : { g:0, ip_outs:0, w:0, l:0, sv:0, hld:0, so:0, bb:0, war:0, er:0 };
     
         let peakWar = -999;
+        let peakStatsData = null;
     
         while (active && age < 46) {
-            // 成長・衰退
+            // --- 成長・衰退 ---
             let growth = 0;
-            if (age < 23) growth = Math.random() * 3 + 2; 
-            else if (age < 27) growth = Math.random() * 2; 
-            else if (age < 31) growth = Math.random() * 1 - 0.5; 
-            else if (age < 35) growth = -Math.random() * 2 - 1; 
-            else growth = -Math.random() * 4 - 2; 
+            if (age < 24) growth = Math.random() * 4 + 1;
+            else if (age < 28) growth = Math.random() * 2;
+            else if (age < 32) growth = Math.random() * 1 - 1;
+            else if (age < 36) growth = -Math.random() * 3 - 1;
+            else growth = -Math.random() * 5 - 3;
     
-            // 怪我ロジック
-            let injuryChance = 0.01 + (injuryProne / 100) * 0.14; 
-            if(Math.random() < injuryChance) {
-                growth -= (10 + Math.random() * 10); 
-                if (injuryProne > 70 && Math.random() < 0.3) {
-                     growth -= 20; // 致命的怪我
-                }
-            }
-            if(Math.random() < 0.05) growth += 5;
-
             if (isBat) {
                 Object.keys(stats).forEach(k => {
-                    let mod = (k === 'speed' && age > 28) ? growth - 1 : growth;
-                    stats[k] = Math.max(1, Math.min(100, stats[k] + mod));
+                    stats[k] = Math.max(1, Math.min(100, stats[k] + growth));
                 });
             } else {
-                let veloMod = (age > 30) ? growth * 0.8 : growth * 0.4;
-                stats.velocity = Math.max(120, Math.min(170, stats.velocity + veloMod)); 
-                let ctrlMod = (age > 32) ? growth * 0.5 : growth;
+                stats.velocity = Math.max(120, Math.min(170, stats.velocity + (growth * 0.5))); 
                 ['control', 'stamina', 'breaking'].forEach(k => {
-                    stats[k] = Math.max(1, Math.min(100, stats[k] + ctrlMod));
+                    stats[k] = Math.max(1, Math.min(100, stats[k] + growth));
                 });
             }
     
             let abilityScore = 0;
             if (isBat) {
-                abilityScore = (stats.contact*1.2 + stats.power*1.1 + stats.defense + stats.speed*0.8)/4.1;
+                abilityScore = (stats.contact + stats.power + stats.defense + stats.speed)/4;
             } else {
                 let veloScore = (stats.velocity - 130) * 2;
-                abilityScore = (veloScore*1.2 + stats.control*1.1 + stats.breaking + stats.stamina*0.8) / 4.1;
+                abilityScore = (veloScore + stats.control + stats.stamina + stats.breaking*5) / 4;
             }
-
-            let s = isBat 
-                ? { g:0, pa:0, ab:0, h:0, 2b:0, 3b:0, hr:0, rbi:0, sb:0, cs:0, bb:0, hbp:0, so:0, sf:0, gidp:0 } 
-                : { g:0, ip_outs:0, bf:0, w:0, l:0, sv:0, hld:0, h:0, hr:0, bb:0, hbp:0, so:0, r:0, er:0 };
-
-            let maxGames = 143;
-            let healthFactor = 1.0;
-            if (injuryProne > 50 && Math.random() < (injuryProne/200)) {
-                healthFactor = 0.5 + Math.random()*0.4;
-            }
-
-            let playChance = Math.min(1.0, Math.max(0, (abilityScore - 35) / 20)); 
-            
-            if (playChance > 0) {
+    
+            let season = {};
+            let war = 0;
+    
+            if (abilityScore < 40) {
+                // 2軍
+                season = isBat 
+                    ? { g:0, avg:'.---', hr:0, rbi:0, sb:0, ops:'.---', bb:0, so:0, uzr:'---' } 
+                    : { g:0, w:0, l:0, sv:0, hld:0, era:'-.--', so:0, whip:'-.--', ip:'0.0' };
+                war = 0;
+                if (age > 25 && Math.random() < 0.3) active = false; 
+            } else {
+                // 1軍
                 if (isBat) {
-                    let actualMaxGames = Math.floor(maxGames * healthFactor);
-                    for (let g = 0; g < actualMaxGames; g++) {
-                        if (Math.random() > playChance) continue;
-                        s.g++;
-                        let pas = 3 + Math.floor(Math.random() * 3); 
-                        if (playChance < 0.6) pas = 1; 
-
-                        for (let p = 0; p < pas; p++) {
-                            s.pa++;
-                            let outcome = simulateBattingPA(stats);
-                            
-                            if (outcome === 'BB') { s.bb++; }
-                            else if (outcome === 'HBP') { s.hbp++; }
-                            else if (outcome === 'SO') { s.ab++; s.so++; }
-                            else if (outcome === 'HR') { s.ab++; s.h++; s.hr++; s.rbi += (1 + (Math.random()>0.7?1:0)); }
-                            else if (outcome === '1B') { s.ab++; s.h++; }
-                            else if (outcome === '2B') { s.ab++; s.h++; s.2b++; }
-                            else if (outcome === '3B') { s.ab++; s.h++; s.3b++; }
-                            else { s.ab++; } 
-
-                            if (['1B', 'BB', 'HBP'].includes(outcome)) {
-                                if (stats.speed > 50 && Math.random() < ((stats.speed-40)*0.005)) {
-                                    if (Math.random() < (0.5 + stats.speed*0.004)) s.sb++; else s.cs++;
-                                }
-                            }
-                        }
-                    }
-
+                    let games = Math.floor(Math.min(143, (abilityScore - 30) * 2.5 + Math.random()*20));
+                    if(games > 143) games = 143;
+                    
+                    let pa = Math.floor(games * (3.5 + Math.random())); 
+                    let bb_pct = 0.05 + (stats.contact * 0.0005); 
+                    let bb = Math.floor(pa * bb_pct);
+                    let ab = pa - bb;
+    
+                    let avg = 0.150 + (stats.contact * 0.002) + (Math.random()*0.04 - 0.02);
+                    let h = Math.floor(ab * avg);
+    
+                    let hr_rate = Math.pow(stats.power, 2) / 180000;
+                    let hr = Math.floor(pa * hr_rate * (0.8 + Math.random()*0.4));
+    
+                    let so_rate = 0.15 + (stats.power*0.0015) - (stats.contact*0.001);
+                    if(so_rate < 0.05) so_rate = 0.05;
+                    let so = Math.floor(pa * so_rate);
+    
+                    let sb = Math.floor(games * (stats.speed > 60 ? (stats.speed-50)*0.02 : 0) * Math.random());
+                    let rbi = Math.floor(h*0.15 + hr*2.8 + Math.random()*10);
+    
+                    let obp = pa>0 ? (h+bb)/pa : 0;
+                    let slg = ab>0 ? (h + hr*3)/ab : 0; 
+                    let ops = obp + slg;
+                    
+                    let defScore = (stats.defense*2 + stats.arm + stats.catch)/4;
+                    let uzr = (defScore - 50) * 0.5; 
+                    let posVal = {'ss':1, '2b':0.8, 'cf':0.5, '3b':0, 'rf':-0.5, 'lf':-0.8, '1b':-1, 'dh':-1.5, 'c':1.2}[pos] || 0;
+                    let effectiveUzr = uzr * (games/143);
+    
+                    let wRAA = ((ops - 0.730) / 1.2) * pa * 0.1; 
+                    let rep = 20 * (pa/600);
+                    let posAdj = posVal * 10 * (games/143);
+                    war = (wRAA + effectiveUzr + posAdj + rep) / 10;
+                    if(war > 12) war = 12;
+    
+                    let opsStr = ops.toFixed(3);
+                    if(ops < 1.0) opsStr = opsStr.replace(/^0/, ''); 
+    
+                    season = { g:games, avg: avg.toFixed(3).replace(/^0/,''), hr, rbi, sb, bb, so, ops: opsStr, uzr: effectiveUzr.toFixed(1) };
+                    
+                    career.g += games; career.pa += pa; career.ab += ab; career.h += h; 
+                    career.hr += hr; career.rbi += rbi; career.sb += sb; career.bb += bb; career.so += so;
                 } else {
                     let isStarter = pos === 'sp';
-                    let rotation = isStarter ? 6 : 1; 
-                    let fatigue = 0;
-                    let actualMaxGames = Math.floor(maxGames * healthFactor);
-
-                    for (let g = 0; g < actualMaxGames; g++) {
-                        if (fatigue > 0) { fatigue--; continue; }
-                        if (Math.random() > playChance) continue;
-
-                        if (isStarter) {
-                             if (Math.random() < 0.95) { 
-                                 simulatePitchingGame(s, stats, true);
-                                 fatigue = 5 + (Math.random() > 0.8 ? 1 : 0); 
-                             }
+                    let games = isStarter ? Math.floor(Math.min(28, abilityScore/2.2)) : Math.floor(Math.min(70, abilityScore/1.1));
+                    
+                    let ipPerG = isStarter ? (4 + stats.stamina*0.05) : (0.5 + stats.stamina*0.01);
+                    let totalIp = games * ipPerG;
+                    let outs = Math.floor(totalIp * 3);
+                    
+                    let pitSkill = (stats.velocity-100)*1.5 + stats.control + stats.breaking*10;
+                    let baseEra = 6.00 - (pitSkill * 0.03); 
+                    let era = Math.max(0.80, baseEra + (Math.random()*1.5 - 0.75));
+                    
+                    // --- 奪三振ロジック修正 ---
+                    // Velocity 130-170, Breaking 0-20
+                    // K/9 = 4.0 (基準) + 球速分 + 変化球分
+                    // 球速: 150km基準で ±10kmで±1.5程度変動
+                    let k9_velo = (stats.velocity - 130) * 0.15; 
+                    let k9_break = stats.breaking * 0.35;
+                    let k9 = 3.5 + k9_velo + k9_break;
+                    
+                    // 上限キャップ (K/9 が 16.0 を超えないように)
+                    if(k9 > 16.0) k9 = 16.0;
+    
+                    let so = Math.floor(totalIp * k9 / 9);
+    
+                    // 物理制限: 奪三振数はアウトの総数を超えない
+                    if(so > outs) so = outs - 1; 
+    
+                    let bb9 = 5.0 - (stats.control * 0.04); 
+                    if(bb9<1) bb9=1;
+                    let bb = Math.floor(totalIp * bb9 / 9);
+    
+                    let whip = 1.30 + (era - 3.50)*0.1; 
+    
+                    let w=0, l=0, sv=0, hld=0;
+                    if(isStarter) {
+                        let winPct = 0.5 - (era - 3.50)*0.15;
+                        let dec = games * 0.9;
+                        w = Math.max(0, Math.floor(dec * winPct));
+                        l = Math.max(0, Math.floor(dec * (1-winPct)));
+                    } else {
+                        w = Math.floor(games * 0.1);
+                        l = Math.floor(games * 0.1);
+                        if (stats.velocity >= 150 || stats.breaking >= 10) {
+                            sv = Math.floor(games * 0.6);
                         } else {
-                            if (Math.random() < 0.4) { 
-                                simulatePitchingGame(s, stats, false);
-                                fatigue = (s.bf_latest > 20) ? 1 : 0; 
-                            }
+                            hld = Math.floor(games * 0.5);
                         }
                     }
+    
+                    let fip = era; 
+                    let raa = (4.50 - fip) * (totalIp/9);
+                    let rep = 20 * (totalIp/200);
+                    war = (raa + rep) / 10;
+    
+                    let ipDisplay = Math.floor(outs/3) + (outs%3 === 0 ? "" : "." + (outs%3));
+    
+                    season = { g:games, w, l, sv, hld, era: era.toFixed(2), so, whip: whip.toFixed(2), ip: ipDisplay };
+                    
+                    career.g += games; career.ip_outs += outs; career.w += w; career.l += l; 
+                    career.sv += sv; career.hld += hld; career.so += so; career.bb += bb; 
+                    career.er += (era * (outs/3) / 9);
                 }
             }
-
-            // WAR計算
-            let war = 0;
-            let displayStats = {};
-
-            if (isBat) {
-                const fr = C.fitting_ratio;
-                const woba_num = 
-                    (0.692 * fr) * s.bb + (0.73  * fr) * s.hbp +
-                    (0.865 * fr) * (s.h - s['2b'] - s['3b'] - s.hr) +
-                    (1.334 * fr) * s['2b'] + (1.725 * fr) * s['3b'] +
-                    (2.065 * fr) * s.hr;
-                const woba_denom = s.ab + s.bb + s.hbp + s.sf;
-                const woba = woba_denom > 0 ? woba_num / woba_denom : 0;
-                
-                const wraa = ((woba - C.lg_woba) / C.woba_scale) * s.pa;
-
-                let defScore = (stats.defense*2 + stats.arm + stats.catch)/4;
-                let uzr = ((defScore - 50) * 0.5) * (s.g/143); 
-
-                const posVals = {'dh':-15.1, '1b':-14.1, 'lf':-12.0, 'rf':-5.0, '3b':-4.8, '2b':3.4, 'cf':4.2, 'ss':10.3, 'c':18.1};
-                const posAdj = (posVals[pos] || 0) * (s.pa / 600);
-
-                const wsb = (s.sb * 0.2) - (s.cs * 0.4);
-                const rep = C.rep_per_pa * s.pa;
-
-                war = (wraa + uzr + wsb + posAdj + rep) / C.rpw;
-
-                let avg = s.ab > 0 ? s.h / s.ab : 0;
-                let obp = s.pa > 0 ? (s.h + s.bb + s.hbp) / s.pa : 0;
-                let slg = s.ab > 0 ? (s.h + s['2b'] + 2*s['3b'] + 3*s.hr) / s.ab : 0;
-                displayStats = {
-                    g: s.g, avg: avg.toFixed(3).replace(/^0/,''), hr: s.hr, rbi: s.rbi, 
-                    sb: s.sb, bb: s.bb, so: s.so, ops: (obp+slg).toFixed(3).replace(/^0/,''), 
-                    uzr: uzr.toFixed(1)
-                };
-
-                career.g += s.g; career.pa += s.pa; career.ab += s.ab; career.h += s.h; 
-                career.hr += s.hr; career.rbi += s.rbi; career.sb += s.sb; career.bb += s.bb; career.so += s.so;
-
-            } else {
-                let ip = s.ip_outs / 3;
-                let fip = ip > 0 ? (13 * s.hr + 3 * (s.bb + s.hbp) - 2 * s.so) / ip + 3.10 : 0;
-                let raa = (C.lg_ra9 - fip) * (ip / 9);
-                let rep_bonus = (pos === 'sp') ? 0.38 : 0.47;
-                let rep_runs = rep_bonus * (ip / 9);
-                
-                war = (raa + rep_runs) / C.rpw;
-
-                let era = ip > 0 ? (s.er * 9 / ip) : 0;
-                let whip = ip > 0 ? (s.bb + s.h) / ip : 0;
-                let ipDisp = Math.floor(s.ip_outs/3) + (s.ip_outs%3===0 ? "" : "." + (s.ip_outs%3));
-                
-                displayStats = {
-                    g: s.g, w: s.w, l: s.l, sv: s.sv, hld: s.hld, 
-                    era: era.toFixed(2), so: s.so, whip: whip.toFixed(2), ip: ipDisp
-                };
-
-                career.g += s.g; career.ip_outs += s.ip_outs; career.w += s.w; career.l += s.l; 
-                career.sv += s.sv; career.hld += s.hld; career.so += s.so; career.bb += s.bb; 
-                career.er += s.er;
-            }
-
+            
             career.war += war;
-            history.push({ age, ...displayStats, war: war.toFixed(1) });
-
+            history.push({ age, ...season, war: war.toFixed(1) });
+    
             if (war > peakWar) {
                 peakWar = war;
-                if(isBat) {
-                    window.tempPeakStats = { 
-                        name: `${name} (${age}歳)`, pa: s.pa, ab: s.ab, h: s.h, hr: s.hr, 
-                        sb: s.sb, bb: s.bb, so: s.so, stadium: 'avg', pos: pos 
-                    };
-                } else {
-                    window.tempPeakStats = {
-                        name: `${name} (${age}歳)`, ip: s.ip_outs/3, er: s.er, so: s.so, 
-                        bb: s.bb, h: s.h, hr: s.hr, role: pos, stadium: 'avg'
-                    };
-                }
+                window.tempPeakStats = isBat ? {
+                    name: `${name} (${age}歳)`,
+                    pa: Math.floor(season.g*4), ab: Math.floor(season.g*4)-season.bb, 
+                    h: Math.floor((season.g*4-season.bb) * parseFloat(season.avg)), 
+                    hr: season.hr, sb: season.sb, bb: season.bb, so: season.so,
+                    stadium: 'avg', pos: pos
+                } : {
+                    name: `${name} (${age}歳)`,
+                    ip: parseFloat(season.ip), 
+                    er: Math.floor(parseFloat(season.ip)*parseFloat(season.era)/9),
+                    so: season.so, bb: Math.floor(season.so/3), 
+                    h: Math.floor(season.so*0.8), hr: Math.floor(season.so/10),
+                    role: pos, stadium: 'avg'
+                };
             }
-
+    
             age++;
             if (age >= 45) active = false;
-            if (age > 30 && war < -0.5 && Math.random() < 0.3) active = false; 
-            if (injuryProne > 80 && abilityScore < 30 && age > 25) active = false;
+            if (age > 30 && war < 0 && Math.random() < 0.5) active = false;
         }
-
-        renderResult(name, pos, history, career, isBat);
-    }
-
-    // --- 打席シミュレーション関数 ---
-    function simulateBattingPA(st) {
-        let pBB = 0.08 + (st.contact - 50) * 0.0015; 
-        if (pBB < 0.02) pBB = 0.02;
-
-        let pSO = 0.20 - (st.contact - 50) * 0.004 + (st.power - 50) * 0.001; 
-        if (pSO < 0.05) pSO = 0.05;
-
-        let roll = Math.random();
-        if (roll < pBB) return 'BB';
-        if (roll < pBB + 0.01) return 'HBP';
-        if (roll < pBB + 0.01 + pSO) return 'SO';
-
-        // インプレー
-        let pHR_BIP = 0.03 + (st.power - 50) * 0.002;
-        if (pHR_BIP < 0) pHR_BIP = 0;
+    
+        const resultPanel = document.getElementById('career-result-panel');
         
-        // BABIP (パワーによるマイナス補正を削除)
-        let babip = 0.300 + (st.speed - 50) * 0.0015 + (st.contact - 50) * 0.001;
-        
-        let rollBIP = Math.random();
-        if (rollBIP < pHR_BIP) return 'HR';
-        
-        if (Math.random() < babip) {
-            let rollHit = Math.random();
-            let p2B = 0.18 + (st.power - 50) * 0.002;
-            let p3B = 0.02 + (st.speed - 50) * 0.001;
-            
-            if (rollHit < p3B) return '3B';
-            if (rollHit < p3B + p2B) return '2B';
-            return '1B';
-        }
-        return 'OUT';
-    }
-
-    // --- 【追加】登板シミュレーション関数（前回不足していたもの） ---
-    function simulatePitchingGame(s, st, isStarter) {
-        s.g++;
-        let maxPitches = isStarter ? (80 + st.stamina * 0.5) : (15 + st.stamina * 0.2);
-        let pitches = 0;
-        let inningOuts = 0;
-        let gameRuns = 0;
-
-        while (pitches < maxPitches && gameRuns < 8) { 
-            s.bf++;
-            s.bf_latest = (s.bf_latest || 0) + 1; 
-            pitches += (3 + Math.random() * 3); 
-
-            let pBB = 0.08 - (st.control - 50) * 0.002;
-            if (pBB < 0.02) pBB = 0.02;
-            
-            let pSO = 0.18 + (st.velocity - 140) * 0.004 + (st.breaking - 50) * 0.002;
-            
-            let roll = Math.random();
-            if (roll < pBB) {
-                s.bb++;
-            } else if (roll < pBB + 0.005) {
-                s.hbp++;
-            } else if (roll < pBB + 0.005 + pSO) {
-                s.so++; s.ip_outs++; inningOuts++;
-            } else {
-                let pHR = 0.03 - (st.control - 50) * 0.0005 - (st.velocity - 140) * 0.0005;
-                if (pHR < 0.005) pHR = 0.005;
-
-                let babip = 0.300 - (st.breaking - 50) * 0.001 - (st.velocity - 140) * 0.001;
-
-                let rollBIP = Math.random();
-                if (rollBIP < pHR) {
-                    s.h++; s.hr++; s.r++; s.er++; gameRuns++;
-                } else if (Math.random() < babip) {
-                    s.h++;
-                    if (Math.random() < 0.3) { s.r++; s.er++; gameRuns++; } 
-                } else {
-                    s.ip_outs++; inningOuts++;
-                }
-            }
-            if (!isStarter && inningOuts >= 3) break; 
-        }
-
-        if (isStarter) {
-            if (gameRuns <= 2 && inningOuts >= 15) { 
-                if (Math.random() < 0.6) s.w++; else if (Math.random() < 0.2) s.l++;
-            } else if (gameRuns >= 4) {
-                s.l++;
-            }
-        } else {
-            if (gameRuns === 0) {
-                 if (st.velocity > 150) s.sv++; else s.hld++; 
-            } else {
-                if (Math.random() < 0.3) s.l++;
-            }
-        }
-    }
-    function renderResult(name, pos, history, career, isBat) {
-        const content = document.getElementById('career-content');
-        
-        // ヘッダー統計の作成
-        let bigStatsHtml = '';
+        let bigStats = '';
         if (isBat) {
-            bigStatsHtml = `
-                <div class="c-big-stat"><div class="c-big-val">${career.h}</div><div class="c-big-lbl">HITS</div></div>
-                <div class="c-big-stat"><div class="c-big-val">${career.hr}</div><div class="c-big-lbl">HR</div></div>
-                <div class="c-big-stat"><div class="c-big-val">${(career.ab > 0 ? (career.h/career.ab).toFixed(3).replace(/^0/,'') : '.000')}</div><div class="c-big-lbl">AVG</div></div>
-                <div class="c-big-stat"><div class="c-big-val val-outstanding">${career.war.toFixed(1)}</div><div class="c-big-lbl">WAR</div></div>
+            let careerAvg = career.ab ? (career.h / career.ab).toFixed(3).replace(/^0/,'') : '.---';
+            bigStats = `
+                <div class="c-big-stat"><div class="c-big-val">${career.h}</div><div class="c-big-lbl">安打</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${career.hr}</div><div class="c-big-lbl">本塁打</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${careerAvg}</div><div class="c-big-lbl">打率</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${career.sb}</div><div class="c-big-lbl">盗塁</div></div>
+                <div class="c-big-stat"><div class="c-big-val" style="color:#d97706;">${career.war.toFixed(1)}</div><div class="c-big-lbl">通算WAR</div></div>
             `;
         } else {
-            bigStatsHtml = `
-                <div class="c-big-stat"><div class="c-big-val">${career.w}</div><div class="c-big-lbl">WINS</div></div>
-                <div class="c-big-stat"><div class="c-big-val">${career.sv}</div><div class="c-big-lbl">SAVES</div></div>
-                <div class="c-big-stat"><div class="c-big-val">${career.so}</div><div class="c-big-lbl">SO</div></div>
-                <div class="c-big-stat"><div class="c-big-val val-outstanding">${career.war.toFixed(1)}</div><div class="c-big-lbl">WAR</div></div>
+            let careerIp = Math.floor(career.ip_outs/3) + (career.ip_outs%3===0 ? "" : "." + (career.ip_outs%3));
+            bigStats = `
+                <div class="c-big-stat"><div class="c-big-val">${career.w}</div><div class="c-big-lbl">勝利</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${career.sv}</div><div class="c-big-lbl">セーブ</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${career.so}</div><div class="c-big-lbl">奪三振</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${careerIp}</div><div class="c-big-lbl">投球回</div></div>
+                <div class="c-big-stat"><div class="c-big-val" style="color:#d97706;">${career.war.toFixed(1)}</div><div class="c-big-lbl">通算WAR</div></div>
             `;
         }
-
-        // テーブルヘッダーと行の作成
+    
         const th = isBat 
-            ? `<th>Age</th><th>G</th><th>AVG</th><th>HR</th><th>RBI</th><th>SB</th><th>OPS</th><th>UZR</th><th style="color:var(--cat-bat)">WAR</th>`
-            : `<th>Age</th><th>G</th><th>W</th><th>L</th><th>SV</th><th>HLD</th><th>ERA</th><th>IP</th><th>SO</th><th style="color:var(--cat-pit)">WAR</th>`;
-
+            ? `<th>年齢</th><th>試合</th><th>打率</th><th>HR</th><th>打点</th><th>盗塁</th><th>四球</th><th>三振</th><th>OPS</th><th>UZR</th><th>WAR</th>`
+            : `<th>年齢</th><th>登板</th><th>勝</th><th>敗</th><th>S</th><th>H</th><th>回</th><th>防率</th><th>奪三振</th><th>WHIP</th><th>WAR</th>`;
+    
         const rows = history.map(h => {
-            let cells = '';
+            const w = parseFloat(h.war);
+            const style = w >= 5.0 ? 'background:#fff7ed;' : '';
+            const warClass = w >= 8.0 ? 'val-outstanding' : (w >= 5.0 ? 'val-great' : (w >= 2.0 ? 'val-good' : ''));
+            
             if (isBat) {
-                cells = `
-                    <td>${h.age}</td><td>${h.g}</td><td>${h.avg}</td><td>${h.hr}</td><td>${h.rbi}</td>
-                    <td>${h.sb}</td><td>${h.ops}</td><td>${h.uzr}</td><td style="font-weight:bold">${h.war}</td>
-                `;
+                return `<tr style="${style}">
+                    <td>${h.age}</td><td>${h.g}</td><td>${h.avg}</td><td>${h.hr}</td><td>${h.rbi}</td><td>${h.sb}</td>
+                    <td>${h.bb}</td><td>${h.so}</td><td>${h.ops}</td><td>${h.uzr}</td>
+                    <td class="${warClass}">${h.war}</td>
+                </tr>`;
             } else {
-                cells = `
-                    <td>${h.age}</td><td>${h.g}</td><td>${h.w}</td><td>${h.l}</td><td>${h.sv}</td>
-                    <td>${h.hld}</td><td>${h.era}</td><td>${h.ip}</td><td>${h.so}</td><td style="font-weight:bold">${h.war}</td>
-                `;
+                return `<tr style="${style}">
+                    <td>${h.age}</td><td>${h.g}</td><td>${h.w}</td><td>${h.l}</td><td>${h.sv}</td><td>${h.hld}</td>
+                    <td>${h.ip}</td><td>${h.era}</td><td>${h.so}</td><td>${h.whip}</td>
+                    <td class="${warClass}">${h.war}</td>
+                </tr>`;
             }
-            return `<tr>${cells}</tr>`;
         }).join('');
-
-        content.innerHTML = `
-            <div class="career-panel" style="text-align:center; animation:fadeIn 0.5s ease;">
-                <div style="font-size:1.5rem; font-weight:900; margin-bottom:5px;">${name}</div>
-                <div style="color:#64748b; font-weight:700; margin-bottom:20px;">
-                    ${pos.toUpperCase()} / ${history.length} Seasons
+    
+        resultPanel.innerHTML = `
+            <div style="width:100%;">
+                <div class="career-title" style="justify-content:center; border:none; font-size:1.5rem;">
+                    ${name} <span style="font-size:0.9rem; font-weight:normal; margin-left:10px; color:#64748b;">${pos.toUpperCase()} / ${history.length}年</span>
                 </div>
                 
                 <div class="c-result-header">
-                    ${bigStatsHtml}
+                    ${bigStats}
                 </div>
                 
                 <div class="c-history-wrap">
@@ -4788,17 +4658,14 @@
                         <tbody>${rows}</tbody>
                     </table>
                 </div>
-                
-                <button class="calc-btn" style="margin-top:30px; background:#475569;" onclick="openCareerSim()">
-                    ${icons.search} 新しい選手を作成する
-                </button>
+    
+                <div style="margin-top:20px; text-align:center;">
+                    <button class="calc-btn" style="background:#3b82f6; width:auto; padding:10px 30px;" onclick="savePeakStats()">
+                        全盛期データを保存
+                    </button>
+                </div>
             </div>
         `;
-    }
-
-    // 未定義だった関数を追加: メニュー用
-    function openGMChallenge() {
-        alert("GM CHALLENGEは現在開発中です。次回のアップデートをお待ちください！");
     }
 
     // Initial Render
