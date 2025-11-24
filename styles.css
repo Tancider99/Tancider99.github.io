@@ -1,383 +1,242 @@
-/* --- Design Tokens (Modern Minimal Style) --- */
+/* --- Design Tokens (Modern Classic with Gold Accent) --- */
 :root {
-    /* ベースカラー: 落ち着いたオフホワイトと濃いグレー */
-    --c-bg: #fdfdfd;
+    /* ベースカラー: 温かみのあるオフホワイトと濃いグレー */
+    --c-bg: #faf9f7; /* ほんのり黄みがかった白 */
     --c-surface: #ffffff;
-    --c-text-primary: #111827; /* ほぼ黒に近いグレー */
-    --c-text-secondary: #6b7280; /* 中間グレー */
-    --c-border: #e5e7eb;
+    --c-text-primary: #2c333d; /* 深みのあるチャコールグレー */
+    --c-text-secondary: #64748b;
+    --c-border: #e2e4e9;
 
-    /* カテゴリカラー: 彩度を落として大人っぽく */
-    --cat-bat: #1e40af; --bg-bat: #eff6ff; /* Deep Blue */
-    --cat-pit: #be123c; --bg-pit: #fff1f2; /* Crimson */
-    --cat-fld: #b45309; --bg-fld: #fffbeb; /* Amber/Brown */
-    --cat-tot: #047857; --bg-tot: #ecfdf5; /* Forest Green */
-    --cat-std: #4b5563; --bg-std: #f3f4f6; /* Gray */
-    
-    --data-source-color: #374151;
-    --ai-color: #4b5563; /* AI色もグレーになじませる */
+    /* アクセントカラー: アンティークゴールド */
+    --c-accent: #c8aa6e; /* 落ち着いた真鍮色 */
+    --c-accent-light: #f2edd9; /* アクセントの淡い色 */
 
-    /* シャドウ: 拡散する淡い影で「浮き」を表現 */
-    --shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
-    --shadow-hover: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.02);
-    --shadow-float: 0 20px 25px -5px rgba(0,0,0,0.05), 0 10px 10px -5px rgba(0,0,0,0.02);
+    /* カテゴリカラー: モノトーンベースにアクセントを少し混ぜる */
+    --cat-bat: var(--c-text-primary); --bg-bat: #f1f5f9;
+    --cat-pit: var(--c-text-primary); --bg-pit: #f1f5f9;
+    --cat-fld: var(--c-text-primary); --bg-fld: #f1f5f9;
+    --cat-tot: var(--c-text-primary); --bg-tot: #f1f5f9;
+    --cat-std: var(--c-text-primary); --bg-std: #f1f5f9;
 
-    --font-sans: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
-    --font-mono: "Menlo", "Consolas", "Monaco", monospace;
-    /* 数式用にセリフ体を指定してアカデミック感を出す */
-    --font-serif: "Georgia", "Times New Roman", "YuMincho", serif; 
+    --shadow-card: 0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+    --shadow-hover: 0 16px 32px -8px rgba(0,0,0,0.08), 0 4px 8px -2px rgba(0,0,0,0.03);
+    --shadow-float: 0 24px 48px -12px rgba(0,0,0,0.1);
+
+    --font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
+    /* おしゃれな雰囲気を出すためセリフ体を積極的に使用 */
+    --font-serif: "Playfair Display", "Georgia", "YuMincho", serif; 
 }
 
-/* --- Dark Mode (Midnight Theme) --- */
+/* --- Dark Mode (Luxe Charcoal Theme) --- */
 body.dark-mode {
-    --c-bg: #0f172a; /* 深い藍色ベース */
-    --c-surface: #1e293b;
-    --c-text-primary: #f8fafc;
-    --c-text-secondary: #94a3b8;
-    --c-border: #334155;
+    --c-bg: #1a1e26; /* 深いチャコール */
+    --c-surface: #232934;
+    --c-text-primary: #e0e0e0;
+    --c-text-secondary: #9ca3af;
+    --c-border: #374151;
+    --c-accent: #d4af37; /* ダークモードでは少し明るいゴールドに */
+    --c-accent-light: #362f20;
+
+    --bg-bat: rgba(255, 255, 255, 0.03);
+    --bg-pit: rgba(255, 255, 255, 0.03);
+    --bg-fld: rgba(255, 255, 255, 0.03);
+    --bg-tot: rgba(255, 255, 255, 0.03);
+    --bg-std: rgba(255, 255, 255, 0.03);
     
-    --bg-bat: rgba(30, 64, 175, 0.2);
-    --bg-pit: rgba(190, 18, 60, 0.2);
-    --bg-fld: rgba(180, 83, 9, 0.2);
-    --bg-tot: rgba(4, 120, 87, 0.2);
-    --bg-std: rgba(75, 85, 99, 0.2);
-    
-    --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-    --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    --shadow-card: 0 4px 12px rgba(0,0,0,0.3);
+    --shadow-hover: 0 16px 36px rgba(0,0,0,0.5);
 }
 
 body {
     background-color: var(--c-bg);
     color: var(--c-text-primary);
     font-family: var(--font-sans);
-    margin: 0;
-    padding: 0;
-    line-height: 1.7; /* 行間を広げて読みやすく */
-    transition: background-color 0.3s, color 0.3s;
-    -webkit-font-smoothing: antialiased; /* 文字を滑らかに */
+    margin: 0; padding: 0;
+    line-height: 1.8;
+    transition: background-color 0.4s ease, color 0.4s ease;
+    /* 紙のような微細なテクスチャを重ねる */
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
 }
 
-/* --- Header: シンプルで力強いデザインへ --- */
+/* --- Header --- */
 header {
-    background: var(--c-surface);
-    padding: 5rem 2rem 3rem; /* 余白をたっぷりとる */
+    background: transparent;
+    padding: 6rem 2rem 4rem;
     text-align: center;
-    border-bottom: 1px solid var(--c-border);
-    /* ドットパターン背景を削除して無地に */
+    position: relative;
+}
+header::after { /* ゴールドの細い区切り線 */
+    content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 2px; background: var(--c-accent);
 }
 
 .brand {
-    font-size: 3rem;
-    font-weight: 800; /* 極太から少し落とす */
-    letter-spacing: -0.03em;
+    font-family: var(--font-serif);
+    font-size: 3.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
     margin: 0;
     color: var(--c-text-primary);
-    /* グラデーションテキストを廃止して単色に */
-    background: none;
-    -webkit-text-fill-color: initial;
 }
 .brand span { 
-    color: var(--c-text-primary); 
-    -webkit-text-fill-color: initial;
-    font-weight: 300; /* "METRICS"部分を細くしてコントラストをつける */
+    color: var(--c-accent); /* "METRICS"をゴールドに */
+    font-weight: 400; font-style: italic;
 }
 
 .subtitle {
-    color: var(--c-text-secondary);
-    margin-top: 1rem;
-    font-weight: 500;
-    letter-spacing: 0.1em; /* 字間を広げて洗練させる */
+    color: var(--c-accent);
+    margin-top: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
+    font-family: var(--font-serif);
 }
 
-/* --- Controls & Input --- */
+/* --- Controls --- */
 .search-wrapper {
-    width: 100%;
-    max-width: 640px; /* 幅を制限してスマートに */
-    margin: 2rem auto;
-    padding: 0 1rem;
-    position: relative;
-    box-sizing: border-box;
+    max-width: 580px; margin: 3rem auto 2rem; padding: 0 1rem; position: relative;
 }
-
 .search-input {
-    width: 100%;
-    padding: 18px 24px 18px 54px;
-    border-radius: 8px; /* 丸みを抑える */
-    border: 1px solid var(--c-border);
-    background: var(--c-bg);
-    font-size: 1rem;
-    color: var(--c-text-primary);
-    transition: all 0.2s;
-    outline: none;
-    box-shadow: none; /* インセットシャドウ削除 */
+    width: 100%; padding: 20px 24px 20px 60px;
+    border-radius: 50px; /* クラシックな丸み */
+    border: 2px solid var(--c-border);
+    background: var(--c-surface);
+    font-size: 1rem; color: var(--c-text-primary);
+    transition: all 0.3s;
 }
 .search-input:focus {
-    background: var(--c-surface);
-    border-color: var(--c-text-primary); /* 黒枠でフォーカス */
-    box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
+    border-color: var(--c-accent); /* フォーカス時にゴールド */
+    box-shadow: 0 4px 20px rgba(200, 170, 110, 0.15);
 }
-
 .search-icon {
-    position: absolute;
-    left: 25px; top: 50%;
-    transform: translateY(-50%);
-    color: var(--c-text-secondary);
-    width: 18px; height: 18px;
-    opacity: 0.7;
-}
-
-.filter-scroll {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    padding: 0 20px;
-    overflow-x: auto;
-    padding-bottom: 5px;
-    flex-wrap: wrap; /* PCでは折り返し */
+    left: 28px; color: var(--c-accent); opacity: 0.8; width: 20px; height: 20px;
 }
 
 .filter-chip {
-    background: transparent;
+    background: var(--c-surface);
     border: 1px solid var(--c-border);
     color: var(--c-text-secondary);
-    padding: 8px 16px;
-    border-radius: 6px; /* 角を四角く */
-    cursor: pointer;
-    font-size: 0.8rem;
-    font-weight: 600;
-    transition: all 0.2s;
-    box-shadow: none;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 0.8rem; font-weight: 600; letter-spacing: 0.05em;
+    transition: all 0.3s;
 }
 .filter-chip:hover {
-    background: var(--c-bg);
-    border-color: var(--c-text-secondary);
-    color: var(--c-text-primary);
+    border-color: var(--c-accent); color: var(--c-accent); background: var(--c-accent-light);
 }
 .filter-chip.active {
-    background: var(--c-text-primary);
-    color: var(--c-surface);
-    border-color: var(--c-text-primary);
-    box-shadow: none;
+    background: var(--c-accent); color: var(--c-surface); border-color: var(--c-accent);
 }
 
 /* --- Grid & Cards --- */
 .grid-container {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 60px 2rem;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px; /* ギャップを少し狭く */
+    max-width: 1140px; margin: 0 auto; padding: 60px 2rem;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 28px;
 }
 
 .metric-card {
     background: var(--c-surface);
-    border-radius: 12px; /* 丸みを少し抑える */
-    border: 1px solid var(--c-border);
-    padding: 28px;
+    border-radius: 16px;
+    border: 1px solid transparent; /* ボーダーは透明にしておく */
+    padding: 36px;
     cursor: pointer;
-    transition: all 0.2s ease-out;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     display: flex; flex-direction: column;
-    position: relative; overflow: hidden;
     box-shadow: var(--shadow-card);
 }
 .metric-card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-4px);
     box-shadow: var(--shadow-hover);
-    border-color: var(--c-text-secondary); /* ホバー時にグレーの枠線 */
+    border-color: var(--c-accent-light); /* ほんのりゴールドの枠 */
 }
-/* カテゴリごとの色枠は廃止し、シンプルに */
 
-.card-header {
-    display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;
-}
+.card-header { margin-bottom: 16px; }
 .card-tag {
-    font-size: 0.65rem; font-weight: 700; padding: 4px 8px; border-radius: 4px;
-    text-transform: uppercase; letter-spacing: 0.05em;
-    background: var(--c-bg); border: 1px solid var(--c-border);
-    color: var(--c-text-secondary); /* タグもモノトーン寄りに */
+    font-size: 0.65rem; font-weight: 700; padding: 6px 12px; border-radius: 20px;
+    background: var(--c-accent-light); color: var(--c-accent); border: none;
 }
 
 .metric-title {
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin: 0;
-    line-height: 1.1;
-    color: var(--c-text-primary);
-    letter-spacing: -0.02em;
+    font-family: var(--font-serif); font-size: 2rem; font-weight: 700;
+    line-height: 1.2; color: var(--c-text-primary);
 }
 .metric-full {
-    font-size: 0.8rem;
-    color: var(--c-text-secondary);
-    font-weight: 500;
-    margin: 4px 0 16px;
-    font-family: var(--font-serif); /* 英語名はセリフ体で知的さを演出 */
-    font-style: italic;
+    font-family: var(--font-serif); font-size: 0.9rem; color: var(--c-accent); /* 英語名はゴールド */
+    font-style: italic; margin: 8px 0 20px;
 }
 .metric-desc {
-    font-size: 0.9rem;
-    color: var(--c-text-secondary);
-    margin: 0;
-    line-height: 1.6;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    font-size: 0.95rem; color: var(--c-text-secondary); line-height: 1.7;
 }
 
-/* --- Modal: ノートのようなデザイン --- */
-.modal-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(255, 255, 255, 0.85); /* 背景を明るく、ブラーなし */
-    z-index: 1000;
-    display: none; justify-content: center; align-items: center;
-    opacity: 0; transition: opacity 0.2s;
-}
-body.dark-mode .modal-overlay { background: rgba(0, 0, 0, 0.7); }
-.modal-overlay.show { opacity: 1; }
-
+/* --- Modal --- */
 .modal-panel {
-    background: var(--c-surface);
-    width: 100%; max-width: 800px; max-height: 95vh;
-    border-radius: 0; /* 角丸なし、または小さく */
-    box-shadow: var(--shadow-float);
-    transform: translateY(10px); 
-    transition: transform 0.2s;
-    display: flex; flex-direction: column;
-    border: 1px solid var(--c-border);
+    border-radius: 16px; border: none; max-width: 860px;
 }
-@media(min-width: 700px) { .modal-panel { border-radius: 8px; margin: 20px; height: auto; } }
-.modal-overlay.show .modal-panel { transform: translateY(0); }
-
 .modal-header {
-    padding: 40px 40px 20px;
-    background: var(--c-surface);
-    border-bottom: none;
+    padding: 50px 50px 30px; text-align: center;
+    background-image: linear-gradient(to bottom, var(--c-accent-light) 0%, var(--c-surface) 100%);
 }
-.modal-body {
-    padding: 0 40px 40px;
-    overflow-y: auto;
-}
+.modal-body { padding: 20px 50px 50px; }
 
-.m-cat {
-    font-size: 0.75rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--c-text-secondary) !important; /* 色を強制的にグレーに */
-    margin-bottom: 0.5rem;
-}
+.m-cat { color: var(--c-accent) !important; }
 .m-title {
-    font-size: 2.8rem; font-weight: 800; margin: 0; line-height: 1; letter-spacing: -0.03em;
-    color: var(--c-text-primary);
+    font-family: var(--font-serif); font-size: 3.2rem; color: var(--c-text-primary);
+    position: relative; padding-bottom: 20px;
 }
-.m-full {
-    font-size: 1.2rem; color: var(--c-text-secondary); margin-top: 5px;
-    font-family: var(--font-serif); font-style: italic;
+.m-title::after { /* タイトル下の装飾線 */
+    content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 60px; height: 3px; background: var(--c-accent);
 }
+.m-full { font-size: 1.3rem; color: var(--c-accent); }
 
 .section-label {
-    font-size: 0.75rem; font-weight: 700; color: var(--c-text-primary);
-    text-transform: uppercase; letter-spacing: 0.1em;
-    margin: 3rem 0 1rem;
-    border-bottom: 2px solid var(--c-text-primary); /* シンプルな黒線 */
-    padding-bottom: 8px;
-    display: block; /* フレックス解除 */
+    font-family: var(--font-serif); font-size: 1rem; color: var(--c-text-primary);
+    margin: 4rem 0 2rem; text-align: center; border: none;
+    position: relative; display: flex; align-items: center; justify-content: center;
 }
-.section-label::before, .section-label::after { display: none; } /* 装飾削除 */
+.section-label::before, .section-label::after { /* 左右のエレガントな線 */
+    content: ''; height: 1px; flex-grow: 1; background: var(--c-border); margin: 0 20px;
+    display: block;
+}
 
-/* 数式ボックス: 黒板風ではなく、紙に書いたようなデザイン */
 .formula-box {
-    background: var(--bg-std);
-    border: 1px solid var(--c-border);
-    padding: 24px;
-    border-radius: 8px;
-    font-family: var(--font-serif);
-    font-size: 1.2rem;
-    color: var(--c-text-primary);
-    text-align: center;
-    box-shadow: none;
-    margin-top: 10px;
+    background: var(--c-surface);
+    border: 2px solid var(--c-accent-light); /* 淡いゴールドの枠 */
+    padding: 36px; border-radius: 12px;
+    font-family: var(--font-serif); font-size: 1.4rem;
 }
-.formula-var { color: var(--c-text-primary); font-weight: bold; font-style: normal; } /* 変数色も統一 */
+.formula-var { color: var(--c-accent); }
 
-/* --- Calculator: フォーム感を消す --- */
+/* --- Calculator --- */
 .calc-container {
-    background: transparent;
-    border: 1px solid var(--c-border);
-    border-radius: 8px;
-    padding: 24px;
-    margin-top: 10px;
+    background: var(--c-accent-light); /* 計算機エリアを淡い色で囲む */
+    border: none; padding: 36px;
 }
-.calc-title { color: var(--c-text-primary); font-weight: 600; }
-.calc-title span { color: var(--c-text-secondary); }
+.calc-title { font-family: var(--font-serif); font-size: 1.2rem; color: var(--c-text-primary); }
 
-.calc-inputs { gap: 20px; }
-.calc-label { font-size: 0.7rem; color: var(--c-text-secondary); margin-bottom: 4px; display: block; }
 .calc-field, .calc-select {
-    width: 100%; box-sizing: border-box;
-    padding: 10px 0; /* 下線スタイルにするため横パディング調整 */
-    border-radius: 0;
-    border: none;
-    border-bottom: 1px solid var(--c-border);
-    background: transparent;
-    font-family: var(--font-mono);
-    text-align: right;
-    font-size: 1.1rem;
-    color: var(--c-text-primary);
-    transition: border-color 0.2s;
+    border-bottom: 2px solid var(--c-border);
+    font-family: var(--font-mono); font-weight: 500;
 }
-.calc-field:focus, .calc-select:focus {
-    outline: none;
-    border-bottom-color: var(--c-text-primary);
-    box-shadow: none;
-}
+.calc-field:focus, .calc-select:focus { border-bottom-color: var(--c-accent); }
 
-.calc-result-area {
-    border-top: 1px solid var(--c-border);
-    margin-top: 30px; padding-top: 20px;
-}
-.calc-res-value { color: var(--c-text-primary); font-family: var(--font-sans); }
+.calc-result-area { border-top: 2px dashed var(--c-border); }
+.calc-res-label { font-family: var(--font-serif); color: var(--c-text-secondary); }
+.calc-res-value { font-family: var(--font-serif); color: var(--c-accent); font-weight: 700; }
 
 .calc-btn {
-    background: var(--c-text-primary); /* 黒ボタン */
+    background: var(--c-accent); /* ゴールドボタン */
     color: var(--c-surface);
-    border-radius: 6px;
-    font-weight: 500;
-    box-shadow: none;
-    letter-spacing: 0.05em;
-    height: 48px;
+    font-family: var(--font-serif); font-weight: 700; letter-spacing: 0.1em;
+    border-radius: 50px;
 }
-.calc-btn:hover { background: var(--c-text-secondary); transform: none; }
-
-/* プリセットバー */
-.preset-bar {
-    background: transparent; border: 1px solid var(--c-border); border-radius: 6px;
+.calc-btn:hover {
+    background: var(--c-text-primary); color: var(--c-accent); /* ホバーで反転 */
 }
 
-/* ツールメニュー */
-.theme-toggle {
-    border-radius: 8px; /* 四角く */
-}
-
-/* --- Career Mode Override --- */
-/* パワプロ風の色味も彩度を落とす */
-.c-rank-fill { background: var(--c-text-primary); opacity: 0.8; }
-.career-panel { border-radius: 12px; box-shadow: var(--shadow-card); }
-.career-header { background: rgba(255,255,255,0.9); border-bottom: 1px solid var(--c-border); }
-.val-outstanding, .val-great, .val-good { color: var(--c-text-primary); background: transparent; text-decoration: underline; }
-
-/* --- Footer --- */
-.footer-details {
-    background: transparent;
-    border: 1px solid var(--c-border);
-    box-shadow: none;
-}
-.footer-summary { background: transparent; color: var(--c-text-primary); }
-
-/* --- Mobile --- */
-@media (max-width: 700px) {
-    .brand { font-size: 2rem; }
-    .grid-container { padding: 20px 1rem; }
-    .modal-header { padding: 30px 20px 10px; }
-    .modal-body { padding: 0 20px 30px; }
-}
+/* その他の微調整 */
+.preset-bar { background: var(--c-surface); border-color: var(--c-accent-light); }
+.theme-toggle { border-radius: 50px; width: 44px; height: 44px; border: 2px solid var(--c-border); }
+.theme-toggle:hover { border-color: var(--c-accent); color: var(--c-accent); }
