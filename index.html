@@ -816,10 +816,10 @@
             .search-wrapper { padding: 0 1rem; }
         }
 
-        /* === New Career Mode Styles (White Theme) === */
+        /* === New Career Mode Styles (v3.0 Power Pros Style) === */
         #career-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #f1f5f9; /* 明るいグレー背景 */
+            background: #f8fafc; /* 背景色: 非常に薄い青グレー */
             z-index: 2000;
             visibility: hidden; opacity: 0;
             transform: translateY(20px);
@@ -832,109 +832,115 @@
         .career-header {
             padding: 15px 30px;
             display: flex; justify-content: space-between; align-items: center;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             border-bottom: 1px solid #e2e8f0;
             position: sticky; top: 0; z-index: 100;
-            backdrop-filter: blur(12px);
+            backdrop-filter: blur(10px);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
-        .career-brand { font-size: 1.4rem; font-weight: 900; letter-spacing: -0.02em; color: #0f172a; }
-        .career-brand span { color: #3b82f6; } /* 青系アクセント */
+        .career-brand { font-size: 1.4rem; font-weight: 900; letter-spacing: -0.02em; color: #0f172a; display: flex; align-items: center; gap: 10px; }
+        .career-brand span { color: #3b82f6; background: #eff6ff; padding: 2px 8px; border-radius: 6px; font-size: 0.8em; }
         
         .career-content {
-            max-width: 1100px; margin: 0 auto; width: 100%; padding: 40px 20px;
+            max-width: 1200px; margin: 0 auto; width: 100%; padding: 40px 20px;
             box-sizing: border-box; flex: 1;
         }
         
-        .career-grid { display: grid; grid-template-columns: 350px 1fr; gap: 30px; align-items: start; }
+        .career-grid { display: grid; grid-template-columns: 380px 1fr; gap: 30px; align-items: start; }
         
-        /* パネルデザイン（カード） */
+        /* パネルデザイン */
         .career-panel { 
             background: #ffffff; 
             border-radius: 24px; 
             padding: 32px; 
             border: 1px solid #e2e8f0; 
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
-            transition: transform 0.3s ease;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
         }
         
         .career-title { 
             font-size: 1.1rem; font-weight: 800; margin-bottom: 24px; 
-            color: #1e293b; display: flex; align-items: center; justify-content: space-between;
-            letter-spacing: 0.05em;
+            color: #1e293b; display: flex; align-items: center;
+            letter-spacing: 0.05em; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;
         }
-        .career-title::before {
-            content: ''; display: inline-block; width: 6px; height: 1.2em; 
-            background: #3b82f6; border-radius: 3px; margin-right: 10px;
-        }
+        .career-title svg { width: 20px; height: 20px; margin-right: 8px; color: #3b82f6; }
         
-        /* 入力フォーム群 */
-        .c-form-group { margin-bottom: 20px; }
+        /* フォーム要素 */
+        .c-form-group { margin-bottom: 24px; }
         .c-label { display: block; font-size: 0.85rem; font-weight: 700; color: #64748b; margin-bottom: 8px; }
         .c-input, .c-select {
-            width: 100%; padding: 10px 12px; border-radius: 12px;
+            width: 100%; padding: 12px; border-radius: 12px;
             border: 1px solid #cbd5e1; background: #f8fafc;
-            color: #1e293b; font-weight: 600; font-family: inherit; font-size: 0.95rem;
+            color: #1e293b; font-weight: 600; font-size: 0.95rem;
             transition: 0.2s; box-sizing: border-box;
         }
         .c-input:focus, .c-select:focus { outline: none; border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
         
-        /* スライダー */
-        .c-slider-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-        .c-slider-val { font-weight: 800; color: #3b82f6; font-family: var(--font-mono); }
-        .c-slider { 
-            width: 100%; -webkit-appearance: none; height: 6px; background: #e2e8f0; border-radius: 3px; outline: none; margin-top: 5px;
+        /* 能力値スライダー（パワプロ風） */
+        .c-rank-bar {
+            height: 6px; width: 100%; background: #e2e8f0; border-radius: 3px; position: relative; margin-top: 10px; margin-bottom: 25px;
         }
-        .c-slider::-webkit-slider-thumb {
-            -webkit-appearance: none; width: 22px; height: 22px; background: #ffffff; 
-            border-radius: 50%; cursor: pointer; transition: 0.2s;
-            border: 2px solid #3b82f6; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .c-rank-fill {
+            height: 100%; border-radius: 3px; background: linear-gradient(90deg, #3b82f6, #2563eb);
+            width: 50%; transition: width 0.2s;
         }
-        .c-slider::-webkit-slider-thumb:hover { transform: scale(1.1); background: #3b82f6; border-color: white; }
+        .c-rank-input {
+            position: absolute; top: -8px; left: 0; width: 100%; height: 20px; opacity: 0; cursor: pointer;
+        }
+        .c-rank-label {
+            display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: #475569;
+        }
+        /* ランク表示の色分け */
+        .rank-s { color: #eab308; } /* Gold */
+        .rank-a { color: #f97316; } /* Orange */
+        .rank-b { color: #ef4444; } /* Red */
+        .rank-c { color: #f43f5e; } /* Pink/Red */
+        .rank-d { color: #10b981; } /* Green */
+        .rank-e { color: #3b82f6; } /* Blue */
+        .rank-f { color: #64748b; } /* Slate */
+        .rank-g { color: #94a3b8; } /* Gray */
         
         /* ロール切り替えタブ */
-        .role-tabs { display: flex; gap: 8px; margin-bottom: 24px; background: #f1f5f9; padding: 4px; border-radius: 14px; }
+        .role-tabs { display: flex; gap: 8px; margin-bottom: 24px; background: #f1f5f9; padding: 5px; border-radius: 12px; }
         .role-tab { 
-            flex: 1; padding: 10px; text-align: center; cursor: pointer; border-radius: 10px; 
-            font-weight: 700; font-size: 0.9rem; color: #64748b; transition: all 0.2s; 
+            flex: 1; padding: 10px; text-align: center; cursor: pointer; border-radius: 8px; 
+            font-weight: 700; font-size: 0.9rem; color: #94a3b8; transition: all 0.2s; 
         }
-        .role-tab.active { background: #ffffff; color: #3b82f6; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-        .role-tab:hover:not(.active) { color: #1e293b; background: rgba(255,255,255,0.5); }
+        .role-tab.active { background: #ffffff; color: #3b82f6; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .role-tab:hover:not(.active) { color: #1e293b; }
         
         /* 結果表示エリア */
         .c-result-header {
-            display: flex; gap: 20px; align-items: center; margin-bottom: 30px;
-            padding-bottom: 20px; border-bottom: 1px dashed #cbd5e1;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); 
+            gap: 15px; margin-bottom: 30px; padding: 20px; background: #f8fafc; border-radius: 16px;
         }
-        .c-big-stat { text-align: center; flex: 1; }
-        .c-big-val { font-size: 2.2rem; font-weight: 900; color: #0f172a; line-height: 1; font-family: var(--font-mono); }
-        .c-big-lbl { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 5px; }
+        .c-big-stat { text-align: center; }
+        .c-big-val { font-size: 1.8rem; font-weight: 900; color: #0f172a; line-height: 1; font-family: var(--font-mono); }
+        .c-big-lbl { font-size: 0.7rem; font-weight: 700; color: #64748b; margin-top: 5px; letter-spacing: 0.05em; }
         
+        /* 履歴テーブル（横スクロール対応） */
         .c-history-wrap {
-            background: #f8fafc; border-radius: 16px; border: 1px solid #e2e8f0;
-            max-height: 500px; overflow-y: auto;
+            background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0;
+            max-height: 500px; overflow: auto; /* 縦横スクロール */
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.02);
         }
-        .c-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .c-table { width: 100%; min-width: 800px; border-collapse: collapse; font-size: 0.85rem; white-space: nowrap; }
         .c-table th { 
-            text-align: center; padding: 12px; background: #f1f5f9; 
-            color: #64748b; font-weight: 700; font-size: 0.8rem; position: sticky; top: 0; z-index: 10;
-            border-bottom: 1px solid #e2e8f0;
+            text-align: center; padding: 12px 8px; background: #f1f5f9; 
+            color: #475569; font-weight: 700; position: sticky; top: 0; z-index: 10;
+            border-bottom: 1px solid #cbd5e1;
         }
-        .c-table td { text-align: center; padding: 12px; border-bottom: 1px solid #e2e8f0; color: #334155; font-weight: 600; font-family: var(--font-mono); }
-        .c-table tr:last-child td { border-bottom: none; }
-        .c-table tr:hover { background: #fff; }
+        .c-table td { text-align: center; padding: 10px 8px; border-bottom: 1px solid #f1f5f9; color: #334155; font-family: var(--font-mono); }
+        .c-table tr:hover { background: #f8fafc; }
         
-        .c-badge {
-            display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800;
-        }
-        .bg-mvp { background: #fef3c7; color: #d97706; } /* WAR 8.0+ */
-        .bg-star { background: #e0f2fe; color: #0284c7; } /* WAR 5.0+ */
-        .bg-reg { background: #f0fdf4; color: #16a34a; } /* WAR 2.0+ */
+        /* WARなど強調 */
+        .val-outstanding { color: #d97706; font-weight: 800; background: #fffbeb; }
+        .val-great { color: #ea580c; font-weight: 800; }
+        .val-good { color: #16a34a; font-weight: 700; }
         
         /* レスポンシブ */
         @media (max-width: 900px) {
             .career-grid { grid-template-columns: 1fr; }
-            .c-result-header { flex-wrap: wrap; }
+            .c-result-header { grid-template-columns: repeat(3, 1fr); }
         }
 
     </style>
@@ -4180,16 +4186,15 @@
         });
     }
 
-    /* --- New Career Simulation Logic (v2.0 White Theme) --- */
-        
+    /* --- New Career Simulation Logic (v3.0 Power Pros Style) --- */
+
     let careerMode = 'batter'; // 'batter' or 'pitcher'
     
     function openCareerSim() {
         const overlay = document.getElementById('career-overlay');
-        // UIの初期レンダリング
         renderCareerCreationUI();
         overlay.classList.add('active');
-        closeModal(); // ツールメニューを閉じる
+        closeModal();
     }
     
     function closeCareerSim() {
@@ -4201,6 +4206,33 @@
         renderCareerCreationUI();
     }
     
+    // ランク判定用関数 (パワプロ風)
+    function getRank(val) {
+        if (val >= 90) return { rank: 'S', class: 'rank-s' };
+        if (val >= 80) return { rank: 'A', class: 'rank-a' };
+        if (val >= 70) return { rank: 'B', class: 'rank-b' };
+        if (val >= 60) return { rank: 'C', class: 'rank-c' };
+        if (val >= 53) return { rank: 'D', class: 'rank-d' };
+        if (val >= 40) return { rank: 'E', class: 'rank-e' };
+        if (val >= 20) return { rank: 'F', class: 'rank-f' };
+        return { rank: 'G', class: 'rank-g' };
+    }
+    
+    function updateRankDisplay(id, val) {
+        const r = getRank(val);
+        document.getElementById(`val-${id}`).innerHTML = 
+            `<span class="${r.class}" style="margin-right:8px; font-size:1.1em;">${r.rank}</span>${val}`;
+        document.getElementById(`fill-${id}`).style.width = `${val}%`;
+        
+        // バーの色もランクに合わせる
+        const colorMap = {
+            'S': '#eab308', 'A': '#f97316', 'B': '#ef4444', 
+            'C': '#f43f5e', 'D': '#10b981', 'E': '#3b82f6', 
+            'F': '#64748b', 'G': '#94a3b8'
+        };
+        document.getElementById(`fill-${id}`).style.background = colorMap[r.rank];
+    }
+    
     function renderCareerCreationUI() {
         const content = document.getElementById('career-content');
         
@@ -4208,30 +4240,67 @@
         const activeClassBat = isBat ? 'active' : '';
         const activeClassPit = !isBat ? 'active' : '';
     
-        // パラメータ定義
+        // パラメータ定義 (パワプロ参考)
         const params = isBat ? [
-            {id:'contact', label:'ミート (Contact)', val:50, desc:'打率・三振率'},
-            {id:'power', label:'パワー (Power)', val:50, desc:'本塁打・長打力'},
-            {id:'speed', label:'走力 (Speed)', val:50, desc:'盗塁・守備範囲'},
-            {id:'eye', label:'選球眼 (Eye)', val:50, desc:'四球率'},
-            {id:'defense', label:'守備力 (Defense)', val:50, desc:'UZR・適性'}
+            {id:'contact', label:'ミート (Contact)', val:55, desc:'打率・コンタクト能力'},
+            {id:'power', label:'パワー (Power)', val:55, desc:'本塁打・長打力'},
+            {id:'speed', label:'走力 (Speed)', val:55, desc:'盗塁・内野安打・守備範囲'},
+            {id:'arm', label:'肩力 (Arm)', val:55, desc:'補殺・守備貢献(UZR)'},
+            {id:'defense', label:'守備力 (Fielding)', val:55, desc:'失策率・守備範囲'},
+            {id:'catch', label:'捕球 (Error)', val:55, desc:'失策回避率'}
         ] : [
-            {id:'velocity', label:'球速 (Velocity)', val:50, desc:'奪三振・被打率'},
-            {id:'control', label:'コントロール (Control)', val:50, desc:'与四球・丁寧さ'},
-            {id:'stamina', label:'スタミナ (Stamina)', val:50, desc:'イニング数'},
-            {id:'breaking', label:'変化球 (Breaking)', val:50, desc:'空振り率'}
+            {id:'velocity', label:'球速 (km/h)', val:145, min:120, max:170, desc:'最高球速・奪三振率'},
+            {id:'control', label:'コントロール', val:55, desc:'与四球率・丁寧さ'},
+            {id:'stamina', label:'スタミナ', val:55, desc:'投球回数・完投能力'},
+            {id:'breaking', label:'変化球総変化量', val:3, min:0, max:20, desc:'空振り率・被打率'}
         ];
     
-        const slidersHtml = params.map(p => `
-            <div class="c-form-group">
-                <div class="c-slider-row">
-                    <span class="c-label" style="margin:0;">${p.label}</span>
-                    <span class="c-slider-val" id="val-${p.id}">${p.val}</span>
+        const slidersHtml = params.map(p => {
+            // 特別な範囲を持つパラメータ(球速、変化球)の処理
+            const isSpecial = (p.id === 'velocity' || p.id === 'breaking');
+            const min = p.min || 1;
+            const max = p.max || 100;
+            
+            let valDisplay = p.val;
+            let rankHtml = '';
+            
+            // 通常の0-100パラメータのみランク表示
+            if (!isSpecial) {
+                const r = getRank(p.val);
+                rankHtml = `<span class="${r.class}" style="margin-right:8px; font-size:1.1em;">${r.rank}</span>`;
+            }
+            
+            // スライダーの％計算
+            let percent = ((p.val - min) / (max - min)) * 100;
+    
+            return `
+                <div class="c-form-group">
+                    <div class="c-rank-label">
+                        <span>${p.label}</span>
+                        <span id="val-${p.id}">${rankHtml}${valDisplay}</span>
+                    </div>
+                    <div class="c-rank-bar">
+                        <div class="c-rank-fill" id="fill-${p.id}" style="width:${percent}%"></div>
+                        <input type="range" id="sim-${p.id}" min="${min}" max="${max}" value="${p.val}" class="c-rank-input"
+                            oninput="
+                                const v = parseInt(this.value);
+                                const min = ${min}, max = ${max};
+                                const pct = ((v - min) / (max - min)) * 100;
+                                
+                                /* 球速・変化球以外の通常パラメータ */
+                                if(${!isSpecial}) {
+                                    updateRankDisplay('${p.id}', v);
+                                } else {
+                                    /* 特殊パラメータの更新 */
+                                    document.getElementById('val-${p.id}').innerText = v;
+                                    document.getElementById('fill-${p.id}').style.width = pct + '%';
+                                }
+                            "
+                        >
+                    </div>
                 </div>
-                <input type="range" id="sim-${p.id}" min="1" max="99" value="${p.val}" class="c-slider" 
-                    oninput="document.getElementById('val-${p.id}').innerText = this.value">
-            </div>
-        `).join('');
+            `;
+        }).join('');
     
         const posOptions = isBat 
             ? `<option value="cf">センター</option><option value="ss">ショート</option><option value="c">キャッチャー</option><option value="rf">ライト</option><option value="lf">レフト</option><option value="3b">サード</option><option value="2b">セカンド</option><option value="1b">ファースト</option><option value="dh">DH</option>`
@@ -4240,29 +4309,36 @@
         content.innerHTML = `
             <div class="career-grid">
                 <div class="career-panel">
-                    <div class="career-title">PLAYER ENTRY</div>
+                    <div class="career-title">
+                        <div>
+                            ${icons.save} PLAYER CREATION
+                        </div>
+                    </div>
                     
                     <div class="role-tabs">
-                        <div class="role-tab ${activeClassBat}" onclick="setCareerMode('batter')">野手 (Batter)</div>
-                        <div class="role-tab ${activeClassPit}" onclick="setCareerMode('pitcher')">投手 (Pitcher)</div>
+                        <div class="role-tab ${activeClassBat}" onclick="setCareerMode('batter')">野手</div>
+                        <div class="role-tab ${activeClassPit}" onclick="setCareerMode('pitcher')">投手</div>
                     </div>
     
                     <div class="c-form-group">
                         <label class="c-label">選手名</label>
-                        <input type="text" id="sim-name" class="c-input" placeholder="例: 佐藤 輝明" value="名無し選手">
+                        <input type="text" id="sim-name" class="c-input" placeholder="例: パワプロくん" value="パワプロくん">
                     </div>
     
                     <div class="c-form-group">
-                        <label class="c-label">経歴 (開始年齢)</label>
-                        <select id="sim-origin" class="c-select">
-                            <option value="hs">高卒 (18歳)</option>
-                            <option value="univ">大卒 (22歳)</option>
-                            <option value="soc">社会人 (24歳)</option>
-                        </select>
+                        <div class="c-slider-row">
+                            <span class="c-label" style="margin:0;">開始年齢</span>
+                            <span class="c-slider-val" id="val-age">18歳</span>
+                        </div>
+                        <input type="range" id="sim-age" min="18" max="30" value="18" class="c-slider"
+                            oninput="document.getElementById('val-age').innerText = this.value + '歳'">
+                        <div style="font-size:0.75rem; color:#94a3b8; margin-top:5px; display:flex; justify-content:space-between;">
+                            <span>高卒(18)</span><span>大卒(22)</span><span>社会人(24~)</span>
+                        </div>
                     </div>
     
                     <div class="c-form-group">
-                        <label class="c-label">ポジション / 役割</label>
+                        <label class="c-label">ポジション</label>
                         <select id="sim-pos" class="c-select">
                             ${posOptions}
                         </select>
@@ -4272,34 +4348,41 @@
     
                     ${slidersHtml}
     
-                    <button class="calc-btn" style="background:#0f172a; margin-top:20px; box-shadow:0 4px 12px rgba(15,23,42,0.3);" onclick="runCareerSim()">
-                        キャリアを開始する
+                    <button class="calc-btn" style="background:#0f172a; margin-top:20px; box-shadow:0 4px 12px rgba(15,23,42,0.2);" onclick="runCareerSim()">
+                        キャリアスタート
                     </button>
                 </div>
     
                 <div class="career-panel" id="career-result-panel" style="min-height:500px; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center; color:#94a3b8;">
-                    <div style="font-size:3rem; margin-bottom:15px; opacity:0.3;">⚾</div>
-                    <div>左側のフォームから設定を行い<br>シミュレーションを開始してください</div>
+                    <div style="font-size:3rem; margin-bottom:15px; opacity:0.3; filter:grayscale(1);">🏟️</div>
+                    <div style="font-weight:700;">PLAYER SIMULATION</div>
+                    <div style="font-size:0.85rem; margin-top:8px;">
+                        左側のパネルで能力を設定し、<br>プロ野球人生を開始してください。<br>
+                        能力値はパワプロ風（S〜G）を参考にしています。
+                    </div>
                 </div>
             </div>
         `;
+        
+        // 初期表示のランク色反映
+        if(isBat) {
+            ['contact','power','speed','arm','defense','catch'].forEach(id => updateRankDisplay(id, 55));
+        } else {
+            updateRankDisplay('control', 55);
+            updateRankDisplay('stamina', 55);
+        }
     }
     
     function runCareerSim() {
         const name = document.getElementById('sim-name').value || "名無し選手";
-        const origin = document.getElementById('sim-origin').value;
+        const startAge = parseInt(document.getElementById('sim-age').value);
         const pos = document.getElementById('sim-pos').value;
         const isBat = careerMode === 'batter';
-    
-        // 開始年齢の設定
-        let startAge = 18;
-        if (origin === 'univ') startAge = 22;
-        if (origin === 'soc') startAge = 24;
     
         // 能力取得
         let stats = {};
         if (isBat) {
-            ['contact', 'power', 'speed', 'eye', 'defense'].forEach(id => {
+            ['contact', 'power', 'speed', 'arm', 'defense', 'catch'].forEach(id => {
                 stats[id] = parseInt(document.getElementById(`sim-${id}`).value);
             });
         } else {
@@ -4309,241 +4392,277 @@
         }
     
         let age = startAge;
-        let year = 1;
         let active = true;
         let history = [];
-        let totalStats = isBat 
-            ? { g:0, h:0, hr:0, rbi:0, sb:0, war:0, ab:0, pa:0 }
-            : { g:0, w:0, l:0, sv:0, so:0, war:0, ip:0 };
-        
+        // 通算成績用オブジェクト
+        let career = isBat 
+            ? { g:0, pa:0, ab:0, h:0, hr:0, rbi:0, sb:0, bb:0, so:0, war:0 }
+            : { g:0, ip_outs:0, w:0, l:0, sv:0, hld:0, so:0, bb:0, war:0, er:0 }; // IPはアウト数で管理
+    
         let peakWar = -999;
         let peakStatsData = null;
     
-        // シミュレーションループ
-        while (active && age < 45) { // 最大45歳まで
-            // --- 1. エイジングカーブ (よりリアルな曲線に) ---
+        // シミュレーションループ (最大45歳)
+        while (active && age < 46) {
+            // --- 1. 成長・衰退ロジック (パワプロ風ペナント参考) ---
+            // 早熟・普通・晩成などのタイプ分けは簡易的にランダム
             let growth = 0;
             
-            // 27-29歳をピークとする正規分布的な成長/衰退
-            if (age < 23) growth = Math.random() * 3 + 2; // 急成長
-            else if (age < 27) growth = Math.random() * 2 + 0.5; // 成長
-            else if (age <= 30) growth = Math.random() * 1 - 0.5; // ピーク（微増減）
-            else if (age <= 34) growth = -Math.random() * 2 - 1; // 緩やかな衰え
-            else growth = -Math.random() * 4 - 2; // 急激な衰え
+            // 20代中盤まで成長、30過ぎて衰退
+            if (age < 24) growth = Math.random() * 4 + 1; // 伸び盛り
+            else if (age < 28) growth = Math.random() * 2; // 全盛期手前
+            else if (age < 32) growth = Math.random() * 1 - 1; // 全盛期維持
+            else if (age < 36) growth = -Math.random() * 3 - 1; // 衰退開始
+            else growth = -Math.random() * 5 - 3; // 急激な衰退
     
-            // ランダムイベント (怪我や覚醒)
-            if (Math.random() < 0.05) growth += 5; // 覚醒
-            if (Math.random() < 0.05) growth -= 5; // 怪我
+            // パラメータ更新
+            if (isBat) {
+                Object.keys(stats).forEach(k => {
+                    stats[k] = Math.max(1, Math.min(100, stats[k] + growth));
+                });
+            } else {
+                // 投手: 球速は落ちやすい
+                stats.velocity = Math.max(120, Math.min(170, stats.velocity + (growth * 0.5))); 
+                ['control', 'stamina', 'breaking'].forEach(k => {
+                    stats[k] = Math.max(1, Math.min(100, stats[k] + growth));
+                });
+            }
     
-            // 能力更新 (0-100の範囲)
-            Object.keys(stats).forEach(k => {
-                stats[k] = Math.max(1, Math.min(99, stats[k] + growth));
-            });
+            // 総合能力値 (1軍レベル判定用)
+            let abilityScore = 0;
+            if (isBat) {
+                // 野手: 走攻守バランス
+                abilityScore = (stats.contact + stats.power + stats.defense + stats.speed)/4;
+            } else {
+                // 投手: 球速150km/h換算 + コンスタ変化球
+                let veloScore = (stats.velocity - 130) * 2; // 130->0, 150->40, 160->60
+                abilityScore = (veloScore + stats.control + stats.stamina + stats.breaking*5) / 4;
+            }
     
-            const abilityAvg = Object.values(stats).reduce((a,b)=>a+b,0) / Object.values(stats).length;
-            
-            // --- 2. 成績生成 (WAR適正化) ---
             let season = {};
             let war = 0;
     
-            // 1軍出場ライン (能力平均35以上)
-            if (abilityAvg < 35) {
-                season = isBat ? {g:0, avg:'.---', hr:0, rbi:0, sb:0, ops:'.---'} : {g:0, w:0, l:0, sv:0, era:'-.--', so:0};
+            // 1軍出場ライン (パワプロのEランク平均程度 = 45)
+            if (abilityScore < 40) {
+                season = isBat 
+                    ? { g:0, avg:'.---', hr:0, rbi:0, sb:0, ops:'.---', bb:0, so:0, uzr:'---' } 
+                    : { g:0, w:0, l:0, sv:0, hld:0, era:'-.--', so:0, whip:'-.--', ip:'0.0' };
                 war = 0;
-                // 若手でなければ引退確率アップ
-                if (age > 26 && Math.random() < 0.5) active = false; 
+                // 25歳以上で能力不足なら引退確率大
+                if (age > 25 && Math.random() < 0.3) active = false; 
             } else {
+                // 1軍定着
                 if (isBat) {
-                    // === 野手シミュレーション ===
-                    // 出場試合数: 能力と運
-                    let games = Math.floor(Math.min(143, (abilityAvg - 20) * 2.5 + Math.random()*20));
-                    if (games > 143) games = 143;
+                    // === 野手成績 ===
+                    // 試合数: スタミナ概念はないが能力が高いほどフル出場
+                    let games = Math.floor(Math.min(143, (abilityScore - 30) * 2.5 + Math.random()*20));
+                    if(games > 143) games = 143;
                     
-                    let pa = Math.floor(games * (3.8 + Math.random() * 0.7)); // 打席
-                    let bb_pct = 0.04 + (stats.eye * 0.0012); // 四球率 (4%~16%)
+                    let pa = Math.floor(games * (3.5 + Math.random())); 
+                    // 四球率: 選球眼の代わりに「ミート」とランダム要素で近似 (パワプロには選球眼パラメータが隠しなので)
+                    // 本来ならEyeパラメータを作るべきだが、今回はContactの一部 + ランダムで
+                    let bb_pct = 0.05 + (stats.contact * 0.0005); 
                     let bb = Math.floor(pa * bb_pct);
-                    let ab = pa - bb; // 簡易
+                    let ab = pa - bb;
     
-                    // 打率: Contact 50 -> .250基準
-                    let avg = 0.180 + (stats.contact * 0.0018) + (Math.random()*0.03 - 0.015);
-                    if(avg > 0.350) avg = 0.350 + (Math.random()*0.02); // 上限キャップ気味に
+                    // 打率: Contact 0-100 -> .150 - .380
+                    // C(60) -> .270くらい
+                    let avg = 0.150 + (stats.contact * 0.002) + (Math.random()*0.04 - 0.02);
                     let h = Math.floor(ab * avg);
     
-                    // 本塁打: Power 50 -> 15本基準
-                    let hr_rate = (stats.power * 0.0007) + (Math.random()*0.005); 
-                    let hr = Math.floor(pa * hr_rate);
+                    // 本塁打: Power 0-100 -> 0 - 60
+                    // B(70) -> 25本くらい
+                    let hr_rate = Math.pow(stats.power, 2) / 180000; // 二乗で増える
+                    let hr = Math.floor(pa * hr_rate * (0.8 + Math.random()*0.4));
     
-                    // 長打（二塁打・三塁打）
-                    let double = Math.floor(h * (0.15 + stats.power*0.001));
-                    let triple = Math.floor(h * (stats.speed*0.0005));
+                    // 三振: Powerが高いと増え、Contactが高いと減る傾向
+                    let so_rate = 0.15 + (stats.power*0.0015) - (stats.contact*0.001);
+                    if(so_rate < 0.05) so_rate = 0.05;
+                    let so = Math.floor(pa * so_rate);
+    
+                    // 走塁
+                    let sb = Math.floor(games * (stats.speed > 60 ? (stats.speed-50)*0.02 : 0) * Math.random());
                     
-                    let sb = Math.floor(games * (stats.speed > 60 ? (stats.speed-60)*0.015 : 0) * Math.random());
-                    let rbi = Math.floor(h*0.3 + hr*2.5 + Math.random()*10);
+                    // 打点 (簡易)
+                    let rbi = Math.floor(h*0.15 + hr*2.8 + Math.random()*10);
     
-                    // 計算用スタッツ
-                    let obp = pa > 0 ? (h + bb) / pa : 0;
-                    let slg = ab > 0 ? (h + double + triple*2 + hr*3) / ab : 0; // 単打=1, 二=2...差分加算
+                    // 計算
+                    let obp = pa>0 ? (h+bb)/pa : 0;
+                    let slg = ab>0 ? (h + hr*3)/ab : 0; // 簡易
                     let ops = obp + slg;
-    
-                    // --- WAR計算 (wOBA近似) ---
-                    // wOBA ≈ 0.69BB + 0.89(H-2B-3B-HR) + 1.27(2B) + 1.62(3B) + 2.10(HR) / PA
-                    // 簡易化: wOBA ≈ OPS * 0.95 程度のスケーリング
-                    let woba = (0.69*bb + 0.89*(h-double-triple-hr) + 1.27*double + 1.62*triple + 2.10*hr) / pa;
-                    if(isNaN(woba)) woba = 0;
-    
-                    // wRAA = (wOBA - lgwOBA) / 1.2 * PA
-                    // lgwOBA = .320 と仮定
-                    let wRAA = (woba - 0.320) / 1.2 * pa;
-    
-                    // 守備貢献 (UZR) & ポジション補正
-                    let uzr = (stats.defense - 50) / 3; // -16 ~ +16
-                    let posAdjTable = {'c':12.5, 'ss':7.5, '2b':2.5, 'cf':2.5, '3b':2.5, 'rf':-7.5, 'lf':-7.5, '1b':-12.5, 'dh':-17.5};
-                    let posAdj = (posAdjTable[pos] || 0) * (games / 143);
-    
-                    // WAR = (wRAA + UZR + PosAdj + Rep) / 10 (RPW=10と仮定)
-                    // Rep (Replacement Level): 控え選手との差。通常 +20点/600打席程度
-                    let rep = 20 * (pa / 600);
                     
-                    war = (wRAA + uzr + posAdj + rep) / 10;
-                    
-                    // 異常値キャップ (シーズン12.0以上は歴史的すぎるため抑制)
-                    if (war > 12) war = 12 + (war-12)*0.1;
+                    // UZR (Defense, Arm, Catchから算出)
+                    // 平均0, 範囲 -20 ~ +20
+                    let defScore = (stats.defense*2 + stats.arm + stats.catch)/4; // 0-100
+                    let uzr = (defScore - 50) * 0.5; 
+                    // ポジション補正
+                    let posVal = {'ss':1, '2b':0.8, 'cf':0.5, '3b':0, 'rf':-0.5, 'lf':-0.8, '1b':-1, 'dh':-1.5, 'c':1.2}[pos] || 0;
+                    let effectiveUzr = uzr * (games/143);
     
-                    season = { g:games, avg: avg.toFixed(3).substring(1), hr, rbi, sb, ops: ops.toFixed(3).substring(1) };
-                    
-                    totalStats.g += games; totalStats.h += h; totalStats.hr += hr; totalStats.rbi += rbi; totalStats.sb += sb; 
-                    totalStats.ab += ab; totalStats.pa += pa;
+                    // WAR (簡易)
+                    let wRAA = ((ops - 0.730) / 1.2) * pa * 0.1; // 係数は適当
+                    let rep = 20 * (pa/600);
+                    let posAdj = posVal * 10 * (games/143);
+                    war = (wRAA + effectiveUzr + posAdj + rep) / 10;
+                    if(war > 12) war = 12; // Cap
     
+                    // 表示用OPS処理
+                    let opsStr = ops.toFixed(3);
+                    if(ops < 1.0) opsStr = opsStr.replace(/^0/, ''); // .950
+    
+                    season = { g:games, avg: avg.toFixed(3).replace(/^0/,''), hr, rbi, sb, bb, so, ops: opsStr, uzr: effectiveUzr.toFixed(1) };
+                    
+                    // 通算加算
+                    career.g += games; career.pa += pa; career.ab += ab; career.h += h; 
+                    career.hr += hr; career.rbi += rbi; career.sb += sb; career.bb += bb; career.so += so;
                 } else {
-                    // === 投手シミュレーション ===
+                    // === 投手成績 ===
                     let isStarter = pos === 'sp';
-                    // 登板数
-                    let games = isStarter ? Math.floor(Math.min(26, abilityAvg/2.5)) : Math.floor(Math.min(65, abilityAvg/1.2));
-                    if (games < 5) games = 0;
-    
+                    let games = isStarter ? Math.floor(Math.min(28, abilityScore/2.2)) : Math.floor(Math.min(70, abilityScore/1.1));
+                    
                     // イニング
-                    let ipPerG = isStarter ? (4 + stats.stamina*0.04) : (0.8 + stats.stamina*0.01);
-                    let ip = Math.floor(games * ipPerG);
+                    let ipPerG = isStarter ? (4 + stats.stamina*0.05) : (0.5 + stats.stamina*0.01);
+                    let totalIp = games * ipPerG;
+                    let outs = Math.floor(totalIp * 3);
                     
-                    // 防御率の生成 (FIPベースで考える)
-                    // 基準 4.00, 能力1につき -0.04 程度
-                    let skill = (stats.control + stats.velocity + stats.breaking*1.2) / 3.2; 
-                    let baseEra = 5.50 - (skill * 0.05); // skill 50 -> 3.00, skill 80 -> 1.50
-                    let era = baseEra + (Math.random()*1.0 - 0.5); // 揺らぎ
-                    if (era < 0.50) era = 0.50; // 下限
+                    // 防御率
+                    // Velocity, Control, Breaking から FIPベースの能力値を算出
+                    // 150km(50) + Con C(60) + Henka 3(15) -> 125pt -> ERA 3.00
+                    let pitSkill = (stats.velocity-100)*1.5 + stats.control + stats.breaking*10;
+                    let baseEra = 6.00 - (pitSkill * 0.03); // Skill 100 -> 3.00
+                    let era = Math.max(0.80, baseEra + (Math.random()*1.5 - 0.75));
+                    
+                    // 奪三振
+                    let k9 = (stats.velocity-130)*0.2 + stats.breaking*0.8; 
+                    if(k9<3) k9=3;
+                    let so = Math.floor(totalIp * k9 / 9);
     
-                    // 三振
-                    let k_rate = 5.0 + (stats.velocity * 0.05) + (stats.breaking * 0.05); // K/9
-                    let so = Math.floor(ip * k_rate / 9);
+                    // 与四球
+                    let bb9 = 5.0 - (stats.control * 0.04); 
+                    if(bb9<1) bb9=1;
+                    let bb = Math.floor(totalIp * bb9 / 9);
     
-                    // 勝敗 (チーム運も絡む)
-                    let winPct = 0.5 - (era - 3.50)*0.1; // ERA 3.50で勝率5割
-                    if (winPct > 0.8) winPct = 0.8;
-                    if (winPct < 0.1) winPct = 0.1;
-                    
-                    let decisions = isStarter ? games * 0.8 : games * 0.2;
-                    let w = Math.floor(decisions * winPct);
-                    let l = Math.floor(decisions * (1 - winPct));
-                    
-                    let sv = 0;
-                    if (!isStarter && stats.velocity > 75 && stats.control > 60) {
-                        sv = Math.floor(games * 0.6); // 抑え定着
+                    // WHIP
+                    let whip = 1.30 + (era - 3.50)*0.1; 
+    
+                    // 勝敗・セーブ・ホールド
+                    let w=0, l=0, sv=0, hld=0;
+                    if(isStarter) {
+                        let winPct = 0.5 - (era - 3.50)*0.15;
+                        let dec = games * 0.9;
+                        w = Math.max(0, Math.floor(dec * winPct));
+                        l = Math.max(0, Math.floor(dec * (1-winPct)));
+                    } else {
+                        let winPct = 0.5;
+                        w = Math.floor(games * 0.1);
+                        l = Math.floor(games * 0.1);
+                        // 抑え適正 (球速150以上 or 変化球多い)
+                        if (stats.velocity >= 150 || stats.breaking >= 10) {
+                            sv = Math.floor(games * 0.6);
+                        } else {
+                            hld = Math.floor(games * 0.5);
+                        }
                     }
     
-                    // --- WAR計算 (FIPベース) ---
-                    // WAR = (リーグ平均RA9 - 投手RA9) * IP / 9 / RPW + Rep
-                    // 投手RA9 ≈ ERA * 1.05 と仮定
-                    // リーグ平均RA9 ≈ 4.50
-                    let ra9 = era * 1.05;
-                    let raa = (4.50 - ra9) * (ip / 9);
-                    
-                    // Rep Level (先発と救援で違うが簡易的に)
-                    let rep = 20 * (ip / 200); // 200イニングで+2.0勝分程度の下駄
-    
+                    // WAR (FIPベース簡易)
+                    let fip = era; // 近似
+                    let raa = (4.50 - fip) * (totalIp/9);
+                    let rep = 20 * (totalIp/200);
                     war = (raa + rep) / 10;
     
-                    season = { g:games, w, l, sv, era: era.toFixed(2), so };
+                    // IP表記 (xx.1, xx.2)
+                    let ipDisplay = Math.floor(outs/3) + (outs%3 === 0 ? "" : "." + (outs%3));
+    
+                    season = { g:games, w, l, sv, hld, era: era.toFixed(2), so, whip: whip.toFixed(2), ip: ipDisplay };
                     
-                    totalStats.g += games; totalStats.w += w; totalStats.l += l; totalStats.sv += sv; totalStats.so += so; totalStats.ip += ip;
+                    career.g += games; career.ip_outs += outs; career.w += w; career.l += l; 
+                    career.sv += sv; career.hld += hld; career.so += so; career.bb += bb; 
+                    career.er += (era * (outs/3) / 9);
                 }
             }
             
-            totalStats.war += war;
+            career.war += war;
             history.push({ age, ...season, war: war.toFixed(1) });
     
             // 全盛期データ更新
             if (war > peakWar) {
                 peakWar = war;
-                // プリセット保存用データの更新
                 window.tempPeakStats = isBat ? {
                     name: `${name} (${age}歳)`,
-                    // 簡易逆算で保存
-                    pa: season.g*4, ab: Math.floor(season.g*4*0.9), 
-                    h: Math.floor(season.g*4*0.9 * parseFloat(season.avg)), 
-                    hr: season.hr, sb: season.sb, 
-                    bb: Math.floor(season.g*4*0.09), so: Math.floor(season.g*4*0.2),
+                    pa: Math.floor(season.g*4), ab: Math.floor(season.g*4)-season.bb, 
+                    h: Math.floor((season.g*4-season.bb) * parseFloat(season.avg)), 
+                    hr: season.hr, sb: season.sb, bb: season.bb, so: season.so,
                     stadium: 'avg', pos: pos
                 } : {
                     name: `${name} (${age}歳)`,
-                    ip: Math.floor(season.g * (pos==='sp'?6:1)), 
-                    er: Math.floor(season.g * (pos==='sp'?6:1) * parseFloat(season.era)/9),
+                    ip: parseFloat(season.ip), 
+                    er: Math.floor(parseFloat(season.ip)*parseFloat(season.era)/9),
                     so: season.so, bb: Math.floor(season.so/3), 
-                    h: Math.floor(season.so), hr: Math.floor(season.so/10),
+                    h: Math.floor(season.so*0.8), hr: Math.floor(season.so/10),
                     role: pos, stadium: 'avg'
                 };
             }
     
-            age++; year++;
-            // 引退判定 (能力低下 または 高齢)
-            if (abilityAvg < 30 || age >= 45) active = false;
-            // 35歳過ぎてWARがマイナスなら引退
-            if (age > 35 && war < 0) active = false;
+            age++;
+            // 引退判定 (35歳以上で能力低下、または成績不振)
+            if (age >= 45) active = false;
+            if (age > 30 && war < 0 && Math.random() < 0.5) active = false;
         }
     
-        // --- 結果表示 (White Theme UI) ---
+        // --- 結果表示 (v3.0) ---
         const resultPanel = document.getElementById('career-result-panel');
         
         // ヘッダー（通算成績）
         let bigStats = '';
         if (isBat) {
-            let careerAvg = totalStats.ab ? (totalStats.h / totalStats.ab).toFixed(3).substring(1) : '.---';
+            let careerAvg = career.ab ? (career.h / career.ab).toFixed(3).replace(/^0/,'') : '.---';
             bigStats = `
-                <div class="c-big-stat"><div class="c-big-val">${careerAvg}</div><div class="c-big-lbl">AVG</div></div>
-                <div class="c-big-stat"><div class="c-big-val">${totalStats.h}</div><div class="c-big-lbl">HITS</div></div>
-                <div class="c-big-stat"><div class="c-big-val">${totalStats.hr}</div><div class="c-big-lbl">HR</div></div>
-                <div class="c-big-stat"><div class="c-big-val">${totalStats.sb}</div><div class="c-big-lbl">SB</div></div>
-                <div class="c-big-stat"><div class="c-big-val" style="color:#d97706;">${totalStats.war.toFixed(1)}</div><div class="c-big-lbl">WAR</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${career.h}</div><div class="c-big-lbl">安打</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${career.hr}</div><div class="c-big-lbl">本塁打</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${careerAvg}</div><div class="c-big-lbl">打率</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${career.sb}</div><div class="c-big-lbl">盗塁</div></div>
+                <div class="c-big-stat"><div class="c-big-val" style="color:#d97706;">${career.war.toFixed(1)}</div><div class="c-big-lbl">通算WAR</div></div>
             `;
         } else {
+            let careerIp = Math.floor(career.ip_outs/3) + (career.ip_outs%3===0 ? "" : "." + (career.ip_outs%3));
             bigStats = `
-                <div class="c-big-stat"><div class="c-big-val">${totalStats.w}</div><div class="c-big-lbl">WINS</div></div>
-                <div class="c-big-stat"><div class="c-big-val">${totalStats.sv}</div><div class="c-big-lbl">SAVES</div></div>
-                <div class="c-big-stat"><div class="c-big-val">${totalStats.so}</div><div class="c-big-lbl">K</div></div>
-                <div class="c-big-stat"><div class="c-big-val" style="color:#d97706;">${totalStats.war.toFixed(1)}</div><div class="c-big-lbl">WAR</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${career.w}</div><div class="c-big-lbl">勝利</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${career.sv}</div><div class="c-big-lbl">セーブ</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${career.so}</div><div class="c-big-lbl">奪三振</div></div>
+                <div class="c-big-stat"><div class="c-big-val">${careerIp}</div><div class="c-big-lbl">投球回</div></div>
+                <div class="c-big-stat"><div class="c-big-val" style="color:#d97706;">${career.war.toFixed(1)}</div><div class="c-big-lbl">通算WAR</div></div>
             `;
         }
     
-        // ヒストリーテーブル
+        // 詳細履歴テーブル
         const th = isBat 
-            ? `<th>年齢</th><th>試合</th><th>打率</th><th>本</th><th>点</th><th>盗</th><th>OPS</th><th>WAR</th>`
-            : `<th>年齢</th><th>試合</th><th>勝</th><th>敗</th><th>S</th><th>防</th><th>三振</th><th>WAR</th>`;
+            ? `<th>年齢</th><th>試合</th><th>打率</th><th>HR</th><th>打点</th><th>盗塁</th><th>四球</th><th>三振</th><th>OPS</th><th>UZR</th><th>WAR</th>`
+            : `<th>年齢</th><th>登板</th><th>勝</th><th>敗</th><th>S</th><th>H</th><th>回</th><th>防率</th><th>奪三振</th><th>WHIP</th><th>WAR</th>`;
     
         const rows = history.map(h => {
             const w = parseFloat(h.war);
-            const badge = w >= 8.0 ? '<span class="c-badge bg-mvp">MVP</span>' : (w >= 5.0 ? '<span class="c-badge bg-star">★</span>' : '');
-            const warCell = `<td style="font-weight:800; color:${w>=5?'#d97706':'#334155'}">${h.war} ${badge}</td>`;
+            const style = w >= 5.0 ? 'background:#fff7ed;' : '';
+            const warClass = w >= 8.0 ? 'val-outstanding' : (w >= 5.0 ? 'val-great' : (w >= 2.0 ? 'val-good' : ''));
             
             if (isBat) {
-                return `<tr><td>${h.age}</td><td>${h.g}</td><td>${h.avg}</td><td>${h.hr}</td><td>${h.rbi}</td><td>${h.sb}</td><td>${h.ops}</td>${warCell}</tr>`;
+                return `<tr style="${style}">
+                    <td>${h.age}</td><td>${h.g}</td><td>${h.avg}</td><td>${h.hr}</td><td>${h.rbi}</td><td>${h.sb}</td>
+                    <td>${h.bb}</td><td>${h.so}</td><td>${h.ops}</td><td>${h.uzr}</td>
+                    <td class="${warClass}">${h.war}</td>
+                </tr>`;
             } else {
-                return `<tr><td>${h.age}</td><td>${h.g}</td><td>${h.w}</td><td>${h.l}</td><td>${h.sv}</td><td>${h.era}</td><td>${h.so}</td>${warCell}</tr>`;
+                return `<tr style="${style}">
+                    <td>${h.age}</td><td>${h.g}</td><td>${h.w}</td><td>${h.l}</td><td>${h.sv}</td><td>${h.hld}</td>
+                    <td>${h.ip}</td><td>${h.era}</td><td>${h.so}</td><td>${h.whip}</td>
+                    <td class="${warClass}">${h.war}</td>
+                </tr>`;
             }
         }).join('');
     
         resultPanel.innerHTML = `
             <div style="width:100%;">
                 <div class="career-title" style="justify-content:center; border:none; font-size:1.5rem;">
-                    ${name} <span style="font-size:0.9rem; font-weight:normal; margin-left:10px; color:#64748b;">${origin.toUpperCase()} / ${pos.toUpperCase()}</span>
+                    ${name} <span style="font-size:0.9rem; font-weight:normal; margin-left:10px; color:#64748b;">${pos.toUpperCase()} / ${history.length}年</span>
                 </div>
                 
                 <div class="c-result-header">
@@ -4559,9 +4678,8 @@
     
                 <div style="margin-top:20px; text-align:center;">
                     <button class="calc-btn" style="background:#3b82f6; width:auto; padding:10px 30px;" onclick="savePeakStats()">
-                        全盛期データを保存する
+                        全盛期データを保存
                     </button>
-                    <div style="font-size:0.75rem; color:#94a3b8; margin-top:8px;">※計算ツール等で使用できます</div>
                 </div>
             </div>
         `;
