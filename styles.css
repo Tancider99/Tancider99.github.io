@@ -239,7 +239,7 @@ header {
 
 .metric-card {
     background: var(--c-surface);
-    border-radius: 20px;
+    border-radius: 6px;
     border: 1px solid var(--c-border);
     padding: 32px;
     cursor: pointer;
@@ -426,7 +426,7 @@ header {
     width: 95%;
     max-width: 850px;
     max-height: 92vh;
-    border-radius: 24px;
+    border-radius: 8px;
     padding: 0;
     position: relative;
     overflow: hidden;
