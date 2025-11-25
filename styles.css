@@ -1341,3 +1341,94 @@ header {
 /* 指標ごとの色分け */
 .val-elite { color: #f43f5e; font-weight: bold; } /* 優秀 */
 .val-good { color: #0ea5e9; font-weight: bold; } /* 良い */
+/* レイアウト分割 */
+.app-container {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    height: calc(100vh - 100px); /* ヘッダー分を引く */
+    max-width: 1800px;
+    margin: 0 auto;
+}
+
+.split-panel {
+    flex: 1;
+    background: var(--c-bg);
+    border-radius: 16px;
+    border: 1px solid var(--c-border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.panel-header {
+    padding: 15px 20px;
+    background: var(--c-card);
+    border-bottom: 1px solid var(--c-border);
+}
+.panel-header h2 { margin: 0; font-size: 1.2rem; color: var(--c-text-primary); }
+
+/* 右パネル：成績表用スタイル */
+.stats-controls-box {
+    padding: 15px;
+    background: var(--c-bg);
+    border-bottom: 1px solid var(--c-border);
+}
+.control-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+.control-row:last-child { margin-bottom: 0; }
+
+.table-wrapper {
+    flex: 1;
+    overflow: auto;
+}
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+.stats-table th {
+    position: sticky;
+    top: 0;
+    background: var(--c-card);
+    color: var(--c-text-secondary);
+    padding: 10px;
+    text-align: center;
+    border-bottom: 2px solid var(--c-border);
+    cursor: pointer;
+    z-index: 10;
+}
+.stats-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--c-border);
+    text-align: right;
+    color: var(--c-text-primary);
+}
+.stats-table td:nth-child(1), /* チーム */
+.stats-table td:nth-child(2) { /* 名前 */
+    text-align: left;
+    position: sticky;
+    left: 0;
+    background: var(--c-bg); /* 横スクロール時に重ならないように */
+    z-index: 5;
+}
+.stats-table td:nth-child(2) { left: 60px; } /* チーム名の幅分ずらす */
+
+.stats-table tr:hover td { background: rgba(0,0,0,0.03); }
+
+/* 値の色分け */
+.val-elite { color: #f43f5e; font-weight: 800; }
+.val-great { color: #f97316; font-weight: 700; }
+.val-good { color: #0ea5e9; font-weight: 700; }
+.val-bad { color: #64748b; opacity: 0.7; }
+
+/* レスポンシブ対応 */
+@media (max-width: 1000px) {
+    .app-container { flex-direction: column; height: auto; }
+    .split-panel { height: 600px; }
+}
