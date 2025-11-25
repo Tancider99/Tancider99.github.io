@@ -79,7 +79,14 @@ function calculateAdvancedStats() {
         const _3b = p['三塁打'] || 0;
         
         const ab = pa - (bb + hbp + sh + sf);
+        
+        // 塁打計算 (H = 1B + 2B + 3B + HR)
+        // TB = 1B + 2*2B + 3*3B + 4*HR
+        //    = (H - 2B - 3B - HR) + 2*2B + 3*3B + 4*HR
+        //    = H + 2B + 2*3B + 3*HR
+        const tb = h + _2b + (2 * _3b) + (3 * hr);
 
+        acc.PA += pa;
         acc.AB += ab;
         acc.H += h;
         acc.BB += bb;
@@ -89,16 +96,17 @@ function calculateAdvancedStats() {
         acc.HR += hr;
         acc._2B += _2b;
         acc._3B += _3b;
+        acc.TB += tb;
         
         return acc;
-    }, { AB:0, H:0, BB:0, IBB:0, HBP:0, SF:0, HR:0, _2B:0, _3B:0 });
+    }, { PA:0, AB:0, H:0, BB:0, IBB:0, HBP:0, SF:0, HR:0, _2B:0, _3B:0, TB:0 });
 
     // --- リーグ定数の計算 ---
     const woba_scale = 1.24;
     const single = total.H - total._2B - total._3B - total.HR;
     const ubb = total.BB - total.IBB; // 意図しない四球
 
-    // wOBA計算 (Weightsはデータ準拠)
+    // wOBA計算
     const woba_numerator = 
         (0.692 * ubb) + 
         (0.73  * total.HBP) + 
@@ -108,12 +116,19 @@ function calculateAdvancedStats() {
         (2.065 * total.HR);
         
     const woba_denominator = total.AB + total.BB - total.IBB + total.SF + total.HBP;
-    
     const lg_woba = woba_denominator > 0 ? woba_numerator / woba_denominator : 0.320;
-    // wRC+調整用：リーグR/PAを少し下げて数値を補正 (0.12 -> 0.11)
-    const lg_r_pa = 0.11; 
 
-    console.log(`League Constants: wOBA=${lg_woba.toFixed(3)}, R/PA=${lg_r_pa}`);
+    // ★lg_r_pa (リーグ得点/打席) の動的計算★
+    // データに「得点」がないため、Runs Created (Basic) で推定
+    // RC = (H + BB + HBP) * TB / (AB + BB + HBP + SF)
+    const on_base = total.H + total.BB + total.HBP;
+    const advance = total.TB;
+    const opportunity = total.AB + total.BB + total.HBP + total.SF;
+    
+    const estimated_runs = (opportunity > 0) ? (on_base * advance) / opportunity : 0;
+    const lg_r_pa = (total.PA > 0) ? estimated_runs / total.PA : 0.11;
+
+    console.log(`League Constants: wOBA=${lg_woba.toFixed(3)}, Est.Runs=${Math.round(estimated_runs)}, R/PA=${lg_r_pa.toFixed(3)}`);
 
     // --- 各選手の指標計算 ---
     currentStatsData = NPB_STATS_DATA.map(p => {
@@ -150,22 +165,21 @@ function calculateAdvancedStats() {
         const wraa = woba_scale > 0 ? ((woba - lg_woba) / woba_scale) * pa : 0;
 
         const pf = TEAM_PF[p.Team] || 1.00;
-        // PF補正（マイルドな補正: 50%適用）
-        const pf_coef = (0.5 * pf) + 0.5;
+        const pf_coef = (0.5 * pf) + 0.5; // マイルド補正
         const park_adj = (1 - pf_coef) * lg_r_pa * pa;
         
         let wrc_plus = 0;
         if (pa > 0 && lg_r_pa > 0) {
+            // wRC+ = ( (wRAA + ParkAdj) / PA + lg_R_PA ) / lg_R_PA * 100
+            // ※式変形: (wRAA/PA + lg_R_PA + (1-PF)*lg_R_PA) / lg_R_PA * 100
             wrc_plus = (((wraa + park_adj) / pa) + lg_r_pa) / lg_r_pa * 100;
         }
 
-        // --- 打球割合 (GB%, FB%, LD%) 計算 ---
-        // 指定式に基づいて成分を算出
+        // --- 打球割合 (GB%, FB%, LD%) ---
         const raw_gb = go_out + 0.5*single + 0.1*_2b + 0.8*e_inf + 0.9*fc_inf;
         const raw_fb = fo_out + 0.3*single + 0.8*_2b + _3b + hr + e_out;
         const raw_ld = lo_out + 0.2*single + 0.1*_2b + 0.2*e_inf + 0.1*fc_inf;
         
-        // 合計して100%になるように正規化
         const total_batted = raw_gb + raw_fb + raw_ld;
         const gb_pct = total_batted > 0 ? (raw_gb / total_batted) * 100 : 0;
         const fb_pct = total_batted > 0 ? (raw_fb / total_batted) * 100 : 0;
@@ -226,7 +240,7 @@ function renderStatsTable() {
         return 0;
     });
 
-    // カラム定義：GB%, FB%, LD% を追加、AVG, OPS等を削除
+    // カラム定義
     const columns = [
         { k: 'Team', label: 'チーム' },
         { k: 'Name', label: '選手名' },
