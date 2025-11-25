@@ -1,4 +1,4 @@
-// js/stats_logic.js の全文
+// js/stats_logic.js
 
 let currentStatsData = [];
 let sortCol = 'wRC_PLUS';
@@ -6,6 +6,22 @@ let sortAsc = false;
 
 // 規定打席数 (143試合 * 3.1)
 const REGULATION_PA = 443; 
+
+// 球団別パークファクター (2024-2025想定 / data.js準拠)
+const TEAM_PF = {
+    'ヤクルト': 1.19, // 神宮
+    'DeNA': 1.04,     // 横浜
+    '広島': 0.99,     // マツダ
+    '巨人': 0.97,     // 東京ドーム
+    '阪神': 0.92,     // 甲子園
+    '中日': 0.86,     // バンテリン
+    '日本ハム': 1.06, // エスコン
+    'ロッテ': 1.06,   // ZOZOマリン
+    'ソフトバンク': 1.05, // PayPay
+    '西武': 0.97,     // ベルーナ
+    'オリックス': 0.95, // 京セラ
+    '楽天': 0.94      // 楽天モバイル
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     // データが読み込まれていれば初期化
@@ -18,24 +34,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ★タブ切り替え機能 (これが消えていたため反応しなかった)
+// タブ切り替え機能
 function switchView(viewName) {
-    // すべてのビューを非表示
     document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
-    // すべてのタブの選択状態を解除
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     
-    // 対象のビューを表示
     const targetView = document.getElementById(`view-${viewName}`);
     if (targetView) targetView.style.display = 'block';
     
-    // 対象のタブを選択状態にする
     const targetTab = document.getElementById(`tab-${viewName}`);
     if (targetTab) targetTab.classList.add('active');
 }
 
 function initStatsBoard() {
-    // 1. チームリストの生成
     const teamSelect = document.getElementById('filter-team');
     if (!teamSelect) return;
 
@@ -47,10 +58,8 @@ function initStatsBoard() {
         teamSelect.appendChild(op);
     });
 
-    // 2. データの加工と計算
     calculateAdvancedStats();
 
-    // 3. 初回描画
     const loading = document.getElementById('stats-loading');
     if(loading) loading.style.display = 'none';
     
@@ -68,8 +77,7 @@ function calculateAdvancedStats() {
         const sh = p['犠打'] || 0;
         const hr = p['本塁打'] || 0;
         
-        // 打数 = 打席数 － (四死球 + 犠打 + 犠飛)
-        // ※妨害系データがないため簡易計算
+        // 打数 = 打席 - (四球+死球+犠打+犠飛) ※妨害等は無視
         const ab = pa - (bb + hbp + sh + sf);
 
         acc.PA += pa;
@@ -87,13 +95,26 @@ function calculateAdvancedStats() {
     }, { PA:0, AB:0, H:0, BB:0, HBP:0, SF:0, HR:0, _2B:0, _3B:0 });
 
     // --- リーグ定数の計算 ---
+    // wOBA Scale (一般的な値を使用)
     const woba_scale = 1.24;
     
+    // リーグ平均 wOBA (Weightsは data.js の定義に合わせて精密化)
+    // BB:0.692, HBP:0.73, 1B:0.865, 2B:1.334, 3B:1.725, HR:2.065
     const single = total.H - total._2B - total._3B - total.HR;
-    const woba_numerator = (0.69 * total.BB) + (0.72 * total.HBP) + (0.89 * single) + (1.27 * total._2B) + (1.62 * total._3B) + (2.10 * total.HR);
+    
+    const woba_numerator = 
+        (0.692 * total.BB) + 
+        (0.73  * total.HBP) + 
+        (0.865 * single) + 
+        (1.334 * total._2B) + 
+        (1.725 * total._3B) + 
+        (2.065 * total.HR);
+        
     const woba_denominator = total.AB + total.BB + total.SF + total.HBP;
     
     const lg_woba = woba_denominator > 0 ? woba_numerator / woba_denominator : 0.320;
+    
+    // リーグ平均 R/PA (得点期待値)
     const lg_r_pa = 0.12; 
 
     console.log(`League Constants: wOBA=${lg_woba.toFixed(3)}, R/PA=${lg_r_pa}`);
@@ -114,18 +135,31 @@ function calculateAdvancedStats() {
         const ab = pa - (bb + hbp + sh + sf);
         const single = h - _2b - _3b - hr;
         
-        // wOBA
-        const w_num = (0.69 * bb) + (0.72 * hbp) + (0.89 * single) + (1.27 * _2b) + (1.62 * _3b) + (2.10 * hr);
+        // wOBA (係数を統一)
+        const w_num = (0.692 * bb) + (0.73 * hbp) + (0.865 * single) + (1.334 * _2b) + (1.725 * _3b) + (2.065 * hr);
         const w_den = ab + bb + sf + hbp;
         const woba = w_den > 0 ? w_num / w_den : 0;
 
-        // wRAA
+        // wRAA = ((wOBA - lg_wOBA) / wOBA_Scale) * PA
         const wraa = woba_scale > 0 ? ((woba - lg_woba) / woba_scale) * pa : 0;
 
-        // wRC+
+        // --- Park Factor 補正 ---
+        const pf = TEAM_PF[p.Team] || 1.00;
+        
+        // PF補正係数 = (0.5 * PF) + (0.5 * (6 - PF) / 5)
+        // ※本拠地50%・他球場平均(リーグ6球団)を想定した補正
+        const home_ratio = 0.5;
+        const pf_coef = (home_ratio * pf) + ((1 - home_ratio) * (6 - pf) / 5);
+        
+        // Park Adjustment (得点単位)
+        // 球場補正値 = (1 - 補正係数) * リーグR/PA * 打席数
+        // 打者有利な球場(PF>1)ならマイナス、不利な球場(PF<1)ならプラスの補正がかかる
+        const parkAdj = (1 - pf_coef) * lg_r_pa * pa;
+
+        // wRC+ = (((wRAA + ParkAdj) / PA + lg_R/PA) / lg_R/PA) * 100
         let wrc_plus = 0;
         if (pa > 0 && lg_r_pa > 0) {
-            wrc_plus = (((wraa / pa) + lg_r_pa) / lg_r_pa) * 100;
+            wrc_plus = (((wraa + parkAdj) / pa) + lg_r_pa) / lg_r_pa * 100;
         }
 
         const true_tb = h + _2b + (2*_3b) + (3*hr);
