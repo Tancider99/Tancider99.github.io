@@ -139,9 +139,6 @@ function renderCareerCreationUI() {
                     </div>
                     <input type="range" id="sim-age" min="18" max="30" value="18" class="c-slider"
                         oninput="document.getElementById('val-age').innerText = this.value + '歳'">
-                    <div style="font-size:0.75rem; color:#94a3b8; margin-top:5px; display:flex; justify-content:space-between;">
-                        <span>高卒(18)</span><span>大卒(22)</span><span>社会人(24~)</span>
-                    </div>
                 </div>
 
                 <div class="c-form-group">
