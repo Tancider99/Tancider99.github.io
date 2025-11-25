@@ -1,46 +1,74 @@
 
 /* --- Design Tokens --- */
 :root {
-    --c-bg: #f8fafc;
+    /* Core Colors - Modern & Sophisticated Palette */
+    --c-bg: #f8fafc; /* 少し冷たいグレー寄りの白 */
     --c-surface: #ffffff;
-    --c-text-primary: #1e293b;
-    --c-text-secondary: #64748b;
+    --c-text-primary: #1e293b; /* 深いネイビーグレー */
+    --c-text-secondary: #475569;
     --c-border: #e2e8f0;
-    
-    /* Category Colors & Accents */
-    --cat-bat: #0ea5e9; --bg-bat: #f0f9ff; /* Sky Blue */
-    --cat-pit: #f43f5e; --bg-pit: #fff1f2; /* Rose */
-    --cat-fld: #d97706; --bg-fld: #fffbeb; /* Amber */
-    --cat-tot: #10b981; --bg-tot: #ecfdf5; /* Emerald */
-    --cat-std: #6366f1; --bg-std: #eef2ff; /* Indigo */
-    --data-source-color: #4b5563;
-    --ai-color: #8b5cf6;
-    
-    --shadow-card: 0 6px 15px -3px rgba(0, 0, 0, 0.08), 0 3px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-hover: 0 12px 25px -5px rgba(0, 0, 0, 0.15), 0 5px 10px -5px rgba(0, 0, 0, 0.08);
-    --shadow-float: 0 20px 50px -10px rgba(0, 0, 0, 0.2);
+    --c-accent: #2563eb; /* リンクや強調色 */
 
-    --font-sans: "Inter", "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
-    --font-mono: "JetBrains Mono", "Fira Code", Consolas, monospace;
-    --font-serif: "Times New Roman", Times, serif; /* For Formulas */
+    /* Category Colors - Deep & Stylish Tones */
+    /* Batting: Deep Cerulean Blue */
+    --cat-bat: #026AA7; 
+    --bg-bat:  #E3F2FD;
+    /* Pitching: Muted Crimson */
+    --cat-pit: #C2185B;
+    --bg-pit:  #FCE4EC;
+    /* Fielding: Warm Terracotta/Amber */
+    --cat-fld: #D84315;
+    --bg-fld:  #FBE9E7;
+    /* Overall: Sophisticated Teal */
+    --cat-tot: #00796B;
+    --bg-tot:  #E0F2F1;
+    /* Standard: Modern Indigo Purple */
+    --cat-std: #3F51B5;
+    --bg-std:  #E8EAF6;
+
+    /* Typography */
+    --font-sans: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+    --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+
+    /* Spacing & Layout */
+    --header-height: 180px;
+    
+    /* Border Radius - Sharpened */
+    --radius-sm: 2px;   /* 小さなボタン、タグなど */
+    --radius: 4px;      /* カード、入力フィールドなど標準的な要素 */
+    --radius-lg: 8px;   /* モーダル、大きなコンテナ */
+    --radius-xl: 12px;  /* 非常に大きな要素 */
+    --radius-full: 9999px; /* 丸いアイコンボタンは維持 */
+
+    /* Shadows - Slightly sharper */
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-card: 0 2px 6px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
+    --shadow-modal: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 5px 15px -8px rgba(0, 0, 0, 0.08);
 }
 
-/* --- Dark Mode Overrides --- */
+/* Dark Mode Colors - adjusted for the new palette */
 body.dark-mode {
-    --c-bg: #0f172a;
+    --c-bg: #0f172a; /* 深いダークネイビー */
     --c-surface: #1e293b;
     --c-text-primary: #f1f5f9;
     --c-text-secondary: #94a3b8;
     --c-border: #334155;
-    
-    --bg-bat: rgba(14, 165, 233, 0.15);
-    --bg-pit: rgba(244, 63, 94, 0.15);
-    --bg-fld: rgba(245, 158, 11, 0.15);
-    --bg-tot: rgba(16, 185, 129, 0.15);
-    --bg-std: rgba(99, 102, 241, 0.15);
-    
-    --shadow-card: 0 6px 15px -3px rgba(0, 0, 0, 0.4), 0 3px 6px -2px rgba(0, 0, 0, 0.2);
-    --shadow-hover: 0 12px 25px -5px rgba(0, 0, 0, 0.6);
+    --c-accent: #60a5fa;
+
+    /* Category Colors - Slightly desaturated and lighter for dark background */
+    --cat-bat: #3399ff;
+    --bg-bat:  rgba(2, 106, 167, 0.15);
+    --cat-pit: #ff4081;
+    --bg-pit:  rgba(194, 24, 91, 0.15);
+    --cat-fld: #ff6e40;
+    --bg-fld:  rgba(216, 67, 21, 0.15);
+    --cat-tot: #26a69a;
+    --bg-tot:  rgba(0, 121, 107, 0.15);
+    --cat-std: #7986cb;
+    --bg-std:  rgba(63, 81, 181, 0.15);
+
+    --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+    --shadow-modal: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
 }
 
 body {
@@ -101,34 +129,32 @@ header {
 }
 
 .search-wrapper {
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    margin: 0 0 1rem;
-    padding: 0 2rem;
     position: relative;
-    display: flex;
-    gap: 15px;
-    align-items: center;
+    max-width: 600px;
+    margin: 0 auto 25px;
+    /* 丸みを帯びた影を削除し、フラットなボーダーでシャープに */
+    box-shadow: none; 
+    border-radius: var(--radius);
 }
 
 .search-input {
-    flex: 1;
-    padding: 16px 24px 16px 50px;
-    border-radius: 16px;
+    width: 100%;
+    padding: 16px 20px 16px 50px;
+    font-size: 1.05rem;
+    /* ボーダーを明示的に追加 */
     border: 1px solid var(--c-border);
-    background: var(--c-bg);
-    font-size: 1rem;
+    border-radius: var(--radius);
+    background: var(--c-surface);
     color: var(--c-text-primary);
-    box-sizing: border-box;
-    transition: all 0.2s;
-    outline: none;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    transition: all 0.2s ease;
+    /* 影を削除 */
+    box-shadow: none; 
 }
 .search-input:focus {
-    background: var(--c-surface);
-    border-color: var(--cat-bat);
-    box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+    outline: none;
+    border-color: var(--c-accent);
+    /* フォーカス時の影もシャープに */
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15); 
 }
 /* 検索アイコンの修正 */
 .search-icon {
