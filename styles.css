@@ -1257,178 +1257,202 @@ header {
     .career-grid { grid-template-columns: 1fr; }
     .c-result-header { grid-template-columns: repeat(3, 1fr); }
 }
-/* Main Navigation Tabs */
-.main-nav {
+/* --- タブナビゲーション --- */
+.tab-nav-container {
     display: flex;
     justify-content: center;
-    gap: 1rem;
-    padding: 0 2rem 2rem;
+    gap: 20px;
+    padding: 0 20px 20px;
     border-bottom: 1px solid var(--c-border);
-    margin-bottom: 2rem;
+    background: var(--c-bg);
+    position: sticky;
+    top: 0;
+    z-index: 100; /* ヘッダーより手前に */
 }
-.nav-tab {
+
+.tab-btn {
     background: transparent;
     border: none;
-    color: var(--c-text-secondary);
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
-    padding: 10px 20px;
+    padding: 12px 24px;
+    border-radius: 30px;
     cursor: pointer;
-    border-bottom: 3px solid transparent;
-    transition: all 0.2s;
+    color: var(--c-text-secondary);
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     gap: 8px;
 }
-.nav-tab.active {
-    color: var(--c-text-primary);
-    border-bottom-color: var(--cat-bat); /* 青色アクセント */
-}
-.nav-tab:hover { color: var(--c-text-primary); }
 
-/* Stats Table Styling */
-.stats-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 2rem;
+.tab-btn:hover {
+    background: rgba(0,0,0,0.05);
+    color: var(--c-text-primary);
 }
+
+.tab-btn.active {
+    background: var(--c-text-primary);
+    color: var(--c-bg);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.dark-mode .tab-btn:hover { background: rgba(255,255,255,0.1); }
+
+/* --- 成績表エリア --- */
+.stats-wrapper {
+    max-width: 1600px;
+    margin: 30px auto;
+    padding: 0 20px;
+}
+
+/* コントロールパネル */
 .stats-controls {
-    display: flex;
-    gap: 20px;
+    background: var(--c-card);
+    border: 1px solid var(--c-border);
+    border-radius: 16px;
+    padding: 20px;
     margin-bottom: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--shadow-card);
+}
+
+.control-group {
+    display: flex;
+    gap: 15px;
     align-items: center;
 }
+
+/* 検索ボックス */
+.search-box {
+    position: relative;
+}
+.search-icon-small {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.5;
+    font-size: 0.9rem;
+}
 .stats-controls input[type="text"] {
+    padding: 10px 10px 10px 32px;
+    border-radius: 8px;
+    border: 1px solid var(--c-border);
+    background: var(--c-bg);
+    color: var(--c-text-primary);
+    width: 240px;
+}
+
+.stats-controls select {
     padding: 10px;
     border-radius: 8px;
     border: 1px solid var(--c-border);
     background: var(--c-bg);
     color: var(--c-text-primary);
-    width: 300px;
+    cursor: pointer;
 }
-.table-responsive {
+
+/* トグルスイッチ風チェックボックス */
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--c-text-primary);
+}
+.toggle-label input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--cat-bat);
+}
+
+.pa-input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--c-text-secondary);
+}
+.pa-input-group input {
+    width: 60px;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--c-border);
+    background: var(--c-bg);
+    color: var(--c-text-primary);
+    text-align: center;
+}
+
+/* テーブル */
+.table-container {
     overflow-x: auto;
     border-radius: 12px;
     border: 1px solid var(--c-border);
     background: var(--c-bg);
+    box-shadow: var(--shadow-card);
 }
+
 .leaderboard-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.9rem;
     white-space: nowrap;
+    font-size: 0.9rem;
 }
+
 .leaderboard-table th {
     background: var(--c-card);
-    color: var(--c-text-secondary);
-    font-weight: 700;
-    padding: 12px 16px;
-    text-align: left;
-    border-bottom: 2px solid var(--c-border);
-    cursor: pointer;
-    position: sticky;
-    top: 0;
-}
-.leaderboard-table th:hover { background: var(--c-border); }
-.leaderboard-table td {
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--c-border);
-    color: var(--c-text-primary);
-}
-.leaderboard-table tr:hover td { background: rgba(0,0,0,0.02); }
-.dark-mode .leaderboard-table tr:hover td { background: rgba(255,255,255,0.05); }
-
-/* 指標ごとの色分け */
-.val-elite { color: #f43f5e; font-weight: bold; } /* 優秀 */
-.val-good { color: #0ea5e9; font-weight: bold; } /* 良い */
-/* レイアウト分割 */
-.app-container {
-    display: flex;
-    gap: 20px;
-    padding: 20px;
-    height: calc(100vh - 100px); /* ヘッダー分を引く */
-    max-width: 1800px;
-    margin: 0 auto;
-}
-
-.split-panel {
-    flex: 1;
-    background: var(--c-bg);
-    border-radius: 16px;
-    border: 1px solid var(--c-border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.panel-header {
-    padding: 15px 20px;
-    background: var(--c-card);
-    border-bottom: 1px solid var(--c-border);
-}
-.panel-header h2 { margin: 0; font-size: 1.2rem; color: var(--c-text-primary); }
-
-/* 右パネル：成績表用スタイル */
-.stats-controls-box {
-    padding: 15px;
-    background: var(--c-bg);
-    border-bottom: 1px solid var(--c-border);
-}
-.control-row {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
-    align-items: center;
-}
-.control-row:last-child { margin-bottom: 0; }
-
-.table-wrapper {
-    flex: 1;
-    overflow: auto;
-}
-.stats-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
-    white-space: nowrap;
-}
-.stats-table th {
-    position: sticky;
-    top: 0;
-    background: var(--c-card);
-    color: var(--c-text-secondary);
-    padding: 10px;
+    padding: 14px;
     text-align: center;
+    font-weight: 700;
+    color: var(--c-text-secondary);
     border-bottom: 2px solid var(--c-border);
     cursor: pointer;
+    user-select: none;
+    position: sticky;
+    top: 0;
     z-index: 10;
 }
-.stats-table td {
-    padding: 8px 10px;
+.leaderboard-table th:hover {
+    background: var(--c-border);
+    color: var(--c-text-primary);
+}
+
+.leaderboard-table td {
+    padding: 10px 14px;
     border-bottom: 1px solid var(--c-border);
     text-align: right;
     color: var(--c-text-primary);
+    font-variant-numeric: tabular-nums; /* 数字の幅を揃える */
 }
-.stats-table td:nth-child(1), /* チーム */
-.stats-table td:nth-child(2) { /* 名前 */
+
+/* 固定列 (チーム・名前) */
+.leaderboard-table td:nth-child(1),
+.leaderboard-table td:nth-child(2) {
     text-align: left;
     position: sticky;
     left: 0;
-    background: var(--c-bg); /* 横スクロール時に重ならないように */
+    background: var(--c-bg);
     z-index: 5;
 }
-.stats-table td:nth-child(2) { left: 60px; } /* チーム名の幅分ずらす */
+.leaderboard-table td:nth-child(2) { left: 70px; border-right: 1px solid var(--c-border); } /* 境界線 */
 
-.stats-table tr:hover td { background: rgba(0,0,0,0.03); }
+.leaderboard-table tr:hover td { background: rgba(0,0,0,0.03); }
+.dark-mode .leaderboard-table tr:hover td { background: rgba(255,255,255,0.05); }
 
-/* 値の色分け */
-.val-elite { color: #f43f5e; font-weight: 800; }
-.val-great { color: #f97316; font-weight: 700; }
-.val-good { color: #0ea5e9; font-weight: 700; }
-.val-bad { color: #64748b; opacity: 0.7; }
+/* 数値の色分け */
+.val-elite { color: #f43f5e; font-weight: 800; } /* ピンク */
+.val-great { color: #f97316; font-weight: 700; } /* オレンジ */
+.val-good { color: #0ea5e9; font-weight: 700; }  /* 青 */
+.val-bad { color: var(--c-text-secondary); opacity: 0.6; }
 
-/* レスポンシブ対応 */
-@media (max-width: 1000px) {
-    .app-container { flex-direction: column; height: auto; }
-    .split-panel { height: 600px; }
+.stats-footer {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--c-text-secondary);
+    text-align: right;
 }
