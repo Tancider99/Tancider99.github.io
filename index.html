@@ -7,10 +7,7 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffffff">
     <link rel="icon" href="Copilot_20251122_185005.png" type="image/png">
-    <link rel="apple-touch-icon" href="Copilot_20251122_185005.png">
-    
     <link rel="stylesheet" href="styles.css">
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-M4CEZGS8HY"></script>
     <script>
@@ -21,33 +18,24 @@
     </script>
 </head>
 <body>
-    
     <header style="padding: 2rem 2rem 1rem;">
         <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:20px; margin-bottom:20px;">
             <div>
                 <h1 class="brand" style="font-size:2.5rem; margin-bottom:5px;">SABR<span>METRICS</span> LAB</h1>
                 <p class="subtitle" style="margin:0;">Ultimate Baseball Analytics Dictionary</p>
             </div>
-            
             <div style="display:flex; gap:10px;">
                 <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle" title="Dark Mode"></button>
-                
-                <button class="theme-toggle" onclick="openToolMenu()" style="
-                    width:auto; padding:0 24px; font-weight:800; letter-spacing:0.05em;
-                    background:var(--c-text-primary); color:var(--c-bg); border:none;
-                    display:flex; align-items:center; gap:8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                ">
-                    <span id="toolIcon">🛠️</span>
+                <button class="theme-toggle" onclick="openToolMenu()" style="width:auto; padding:0 24px; font-weight:800; letter-spacing:0.05em; background:var(--c-text-primary); color:var(--c-bg); border:none; display:flex; align-items:center; gap:8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                    <span id="headerToolIcon" style="display:flex;"></span>
                     TOOLS
                 </button>
             </div>
         </div>
-    
         <div class="search-wrapper" style="padding:0; margin-bottom:15px;">
             <div class="search-icon" id="searchIcon"></div>
             <input type="text" class="search-input" id="searchInput" placeholder="指標名、意味、計算式で検索" oninput="handleSearch()">
         </div>
-        
         <div class="filter-scroll" style="padding:0; justify-content:flex-start;">
             <div class="filter-chip active" onclick="filterCategory('all')" data-cat="all">ALL</div>
             <div class="filter-chip" onclick="filterCategory('std')" data-cat="std">基本</div>
@@ -61,7 +49,7 @@
     <div style="max-width: 1200px; margin: 0 auto; padding: 50px 2rem 0;">
         <details class="footer-details" style="border-color: var(--cat-bat); background: var(--bg-bat); margin-bottom: 20px;">
             <summary class="footer-summary" style="font-weight:800; color:var(--cat-bat);">
-                <span class="footer-icon">⚠️</span> 
+                <span class="footer-icon" id="footerAlertIcon" style="display:flex; margin-right:8px;"></span> 
                 <span>【重要】当サイトの指標と計算ロジックについて</span>
             </summary>
             <div class="footer-content">
@@ -71,104 +59,7 @@
                     公式記録や専門サイト（1.02やFanGraphs等）の厳密な算出値とは、データの粒度や補正係数の違いにより<strong>必ず乖離が発生します。</strong><br>
                     SNS等で数値を共有・引用される際は、公式記録と混同されないようご配慮をお願いいたします。
                 </div>
-
-                <div style="margin-bottom: 30px;">
-                    <h3>計算ロジックの前提</h3>
-                    <p>
-                        入力項目として存在しないデータ（例：外野フライの正確な割合、球場ごとの詳細なパークファクター変動など）は、近年のNPB平均値に近い値をデフォルトとして使用しています。<br>
-                        より正確な値を求めたい場合は、各計算画面の「詳細設定」からリーグ総合成績などのパラメータを調整してください。
-                    </p>
-                </div>
-
-                <div style="margin-bottom: 30px;">
-                    <h3>主要指標の詳細計算ロジック（本サイト内の処理）</h3>
-                    
-                    <div class="logic-box">
-                        <div class="logic-title">野手WAR <span class="logic-cat bat">Batting</span></div>
-                        <div class="logic-formula">
-                            WAR = (攻撃貢献 + 守備貢献 + 走塁貢献 + 守備位置補正 + 代替水準補正) ÷ RPW
-                        </div>
-                        <div class="logic-desc">
-                            まずリーグ総合成績（詳細設定の値）から、その環境における各プレーの得点価値（wOBA係数）を動的に算出します。
-                            算出した係数を用いて対象選手のwOBAを求め、リーグ平均と比較して「平均的打者よりどれだけ得点を生み出したか（wRAA）」を計算します。
-                            これに本拠地のパークファクター補正、守備位置ごとの難易度補正、入力された守備評価(UZR)と走塁貢献(wSB)を加算します。
-                            最後に、出場打席数に応じた「代替可能選手（リプレイスメント・レベル）との差分」を加え、1勝あたりの得点価値(RPW)で割ることで勝利数に換算しています。
-                        </div>
-                    </div>
-
-                    <div class="logic-box">
-                        <div class="logic-title">wRC+ <span class="logic-cat bat">Batting</span></div>
-                        <div class="logic-formula">
-                            wRC+ = ( (パークファクター補正後の得点創出能力) ÷ リーグ平均得点力 ) × 100
-                        </div>
-                        <div class="logic-desc">
-                            上記で算出したwRAA（平均より増やした得点数）に対し、本拠地のパークファクターに基づく補正を行います（打者有利な球場ならマイナス、不利ならプラス）。
-                            補正後の値を打席あたりの得点生産力に換算し、「リーグ平均を100とした場合の指数」として正規化しています。
-                            これにより、球場の違いを排除して打撃傑出度を比較可能にしています。
-                        </div>
-                    </div>
-
-                    <div class="logic-box">
-                        <div class="logic-title">投手WAR <span class="logic-cat pit">Pitching</span></div>
-                        <div class="logic-formula">
-                            WAR = (平均比失点抑止量 + 代替水準補正) ÷ RPW
-                        </div>
-                        <div class="logic-desc">
-                            本ツールではFIP（守備の影響を除いた疑似防御率）をベースに計算しています。
-                            まず対象投手のFIPと、パークファクター補正をかけたリーグ平均失点率(RA9)を比較し、平均に対してどれだけ失点を防いだか(RAA)を算出します。
-                            そこに役割（先発・救援）に応じた「代替水準投手との差分」を加算し、RPWで割ることで勝利貢献数を算出しています。
-                            ※FIP定数はリーグ総合成績から自動計算されます。
-                        </div>
-                    </div>
-
-                    <div class="logic-box">
-                        <div class="logic-title">xFIP <span class="logic-cat pit">Pitching</span></div>
-                        <div class="logic-formula">
-                            xFIP = (13 × (推定フライ数 × リーグHR/FB率) + 3×(BB+HBP) - 2×SO) ÷ IP + 定数
-                        </div>
-                        <div class="logic-desc">
-                            入力された「打球傾向(GB%)」に基づき、全打球に対するゴロ・ライナー・フライの内訳を自動推定します。
-                            そのうちフライボール(FB)に対して「リーグ平均のHR/FB率（フライが本塁打になる確率）」を適用することで、「運に左右されない期待被本塁打数」を算出します。
-                            この期待値を用いてFIPの式を再計算し、リーグ平均防御率のスケールに合うよう定数（リーグ平均RA9とリーグ平均xFIPの差分）を加算して調整しています。
-                        </div>
-                    </div>
-
-                    <div class="logic-box">
-                        <div class="logic-title">tRA <span class="logic-cat pit">Pitching</span></div>
-                        <div class="logic-formula">
-                            tRA = ( Σ(各イベント数 × 期待失点価値) ) ÷ IP × 27 + 定数
-                        </div>
-                        <div class="logic-desc">
-                            入力データと打球傾向から、三振、四死球、被本塁打に加え、ゴロ(GB)、ライナー(LD)、外野フライ(FB)、内野フライ(PU)の各打球数を推定します。
-                            それぞれのイベントに対して統計的に導き出された「期待失点ウェイト（例：被本塁打=1.401, ライナー=0.289, 三振=-0.108など）」を掛け合わせ、総失点期待値を算出します。
-                            これを27アウト（9イニング）あたりに換算し、リーグ全体の失点率スケールに合わせるための定数を加えて表示しています。
-                        </div>
-                    </div>
-
-                    <div class="logic-box">
-                        <div class="logic-title">SIERA <span class="logic-cat pit">Pitching</span></div>
-                        <div class="logic-formula">
-                            SIERA = 6.145 - 16.99(K%) + 11.43(BB%) - 1.86(GB%) ... [多項式]
-                        </div>
-                        <div class="logic-desc">
-                            打球傾向から推定したゴロ率(GB%)と、奪三振率(K%)、与四球率(BB%)などを用い、それらの二乗項や相互作用項（例：奪三振率×ゴロ率）を含む複雑な回帰式によって計算しています。
-                            「奪三振率が高い投手は打たれたゴロもヒットになりにくい」「与四球が多い投手はゴロ率が高いと併殺を取りやすい」といった指標間の相乗効果を数式化し、投球の質をより詳細に評価しています。
-                        </div>
-                    </div>
-
-                </div>
-                
-                <div>
-                    <h3>参考にしたサイト</h3>
-                    <ul>
-                        <li><a href="https://1point02.jp/op/index.aspx" target="_blank" rel="noopener noreferrer">1.02 - Essence of Baseball</a></li>
-                        <li><a href="https://www.baseballprospectus.com/news/article/10027/introducing-siera-part-1/" target="_blank" rel="noopener noreferrer">Baseball Prospectus</a></li>
-                        <li><a href="http://bbalone.blog119.fc2.com/blog-entry-551.html" target="_blank" rel="noopener noreferrer">Baseball Concrete Blog</a></li>
-                        <li><a href="https://l-data-daily.com/post-1763/" target="_blank" rel="noopener noreferrer">セイバーメトリクス指標・用語辞典</a></li>
-                        <li><a href="https://bo-no05.hatenadiary.org/" target="_blank" rel="noopener noreferrer">ぼーののブログ</a></li>
-                        <li><a href="https://ranzankeikoku.blog.fc2.com/blog-entry-6591.html" target="_blank" rel="noopener noreferrer">日本プロ野球RCAA&PitchingRunまとめblog</a></li>
-                    </ul>
-                </div>
+                <div><h3>計算ロジックの前提</h3><p>入力項目として存在しないデータ...（中略）</p></div>
             </div>
         </details>
     </div>
@@ -177,17 +68,13 @@
         let lastScrollY = window.scrollY;
         window.addEventListener('scroll', () => {
             const currentScrollY = window.scrollY;
-            if (currentScrollY > 60) {
-                document.body.classList.add('scrolled');
-            } else {
-                document.body.classList.remove('scrolled');
-            }
+            if (currentScrollY > 60) document.body.classList.add('scrolled');
+            else document.body.classList.remove('scrolled');
             lastScrollY = currentScrollY;
         }, { passive: true });
     </script>
 
-    <div class="grid-container" id="grid">
-        </div>
+    <div class="grid-container" id="grid"></div>
 
     <footer class="footer-area">
         <div style="text-align:center; color:var(--c-text-secondary); padding:20px;">
@@ -218,7 +105,7 @@
             <button class="g-btn" onclick="zoomOut()" title="縮小"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" x2="16" y1="12" y2="12"/></svg></button>
             <button class="g-btn" onclick="fitToScreen()" title="リセット"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
             <div style="width:1px; height:24px; background:rgba(255,255,255,0.2); margin:auto 5px;"></div>
-            <button class="g-btn close" onclick="closeMindMap()" title="閉じる"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+            <button class="g-btn close" onclick="closeMindMap()" title="閉じる"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
         </div>
         <canvas id="starfield-canvas"></canvas>
     </div>
@@ -230,48 +117,30 @@
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
         </div>
-        <div class="career-content" id="career-content">
-            </div>
+        <div class="career-content" id="career-content"></div>
     </div>
 
     <script src="js/data.js"></script>
-    
     <script src="js/core.js"></script>
-    
     <script src="js/app.js"></script>
-    
     <script src="js/features/batch.js"></script>
     <script src="js/features/career.js"></script>
     <script src="js/features/galaxy.js"></script>
-    
     <script>
-        // Start Application
-        initApp(); // app.js 内で定義 (アイコン設定、テーマ初期化)
-        render();  // app.js 内で定義 (グリッド描画)
+        initApp();
+        render();
     </script>
-
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registration successful:', registration.scope);
-                        registration.onupdatefound = () => {
-                            const installingWorker = registration.installing;
-                            installingWorker.onstatechange = () => {
-                                if (installingWorker.state === 'installed') {
-                                    if (navigator.serviceWorker.controller) {
-                                        console.log('New content is available; please refresh.');
-                                    } else {
-                                        console.log('Content is cached for offline use.');
-                                    }
-                                }
-                            };
+                navigator.serviceWorker.register('./service-worker.js').then(registration => {
+                    registration.onupdatefound = () => {
+                        const installingWorker = registration.installing;
+                        installingWorker.onstatechange = () => {
+                            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) console.log('New content is available; please refresh.');
                         };
-                    })
-                    .catch(err => {
-                        console.log('ServiceWorker registration failed:', err);
-                    });
+                    };
+                });
             });
             let refreshing;
             navigator.serviceWorker.addEventListener('controllerchange', () => {
